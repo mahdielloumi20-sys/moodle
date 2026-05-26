@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administration - Tableau de bord</title>
+  <meta name="description" content="Tableau de bord administrateur IC Canada Academy LMS">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/admin-dashboard.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" aria-label="Navigation administration">
+      <div class="brand">
+        <div class="brand-mark">IC</div>
+        <div>
+          <strong>IC Canada Academy</strong>
+          <span>Learning Platform</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section-title">Administration</div>
+      <nav class="nav-list">
+        <a class="nav-item active" href="#" aria-current="page" data-view="dashboard">Tableau de bord</a>
+        <a class="nav-item" href="#" data-view="tracking">Suivi global</a>
+        <a class="nav-item" href="#" data-view="users">Utilisateurs</a>
+        <a class="nav-item" href="#" data-view="catalog">Catalogue</a>
+        <a class="nav-item" href="#" data-view="requests">Demandes</a>
+        <a class="nav-item" href="#" data-view="settings">Paramètres</a>
+      </nav>
+    </aside>
+
+    <div class="main-shell">
+      <header class="topbar">
+        <div>
+          <div class="topbar-kicker">Espace administrateur</div>
+          <div class="topbar-title">Programme Jeunes Talents</div>
+        </div>
+        <div class="user-chip" aria-label="Administrateur connecté">
+          <span class="avatar">KK</span>
+          <span>Karim Karray</span>
+        </div>
+      </header>
+
+      <main id="adminDashboard" class="main-content" tabindex="-1"></main>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="modalBackdrop" onclick="if(event.target === this) closeModal()">
+    <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle"></div>
+  </div>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+  <script src="../js/dashboard.js"></script>
+</body>
+</html>
