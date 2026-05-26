@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion - IC Canada Academy LMS</title>
+  <meta name="description" content="Connexion à la plateforme IC Canada Academy LMS">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/login.css">
+</head>
+<body>
+  <a href="#loginForm" class="skip">Aller au formulaire de connexion</a>
+
+  <main id="loginScreen" class="login-screen">
+    <aside class="login-hero" aria-label="Présentation IC Canada Academy">
+      <div class="login-hero-content">
+        <div class="login-emblem-white" aria-hidden="true">
+          <span>IC</span>
+          <strong>International Consulting Canada</strong>
+        </div>
+
+        <h1>Learning Platform</h1>
+        <p>
+          Accédez aux formations, aux ressources pédagogiques, au suivi de progression
+          et aux espaces dédiés aux participants, formateurs et administrateurs.
+        </p>
+
+        <ul class="login-features">
+          <li>11 formations du Programme Jeunes Talents</li>
+          <li>Suivi des inscriptions, paiements et certificats</li>
+          <li>Espaces personnalisés selon votre rôle</li>
+        </ul>
+      </div>
+
+      <div class="login-hero-footer">
+        IC Canada Academy LMS - Programme Jeunes Talents
+      </div>
+    </aside>
+
+    <section class="login-form-panel" aria-label="Connexion">
+      <div class="login-form">
+        <div class="login-logo-full" aria-hidden="true">
+          <span>IC</span>
+          <div>
+            <strong>Academy</strong>
+            <small>Learning Platform</small>
+          </div>
+        </div>
+
+        <h2>Connexion</h2>
+        <p class="sub">Accédez à votre espace personnel</p>
+
+        <div class="demo-accounts demo-access-block">
+          <h3>Tester un profil</h3>
+          <div class="demo-accounts-grid">
+            <button type="button" class="demo-btn" onclick="loginAs('user_2')">Participant</button>
+            <button type="button" class="demo-btn" onclick="loginAs('trainer_1')">Formateur</button>
+            <button type="button" class="demo-btn" onclick="loginAs('admin_1')">Administrateur</button>
+          </div>
+        </div>
+
+        <form id="loginForm" onsubmit="event.preventDefault(); handleLogin();">
+          <label for="loginEmail">Adresse e-mail</label>
+          <input type="email" id="loginEmail" placeholder="s.trabelsi@example.com" required autocomplete="email">
+
+          <label for="loginPassword">Mot de passe</label>
+          <input type="password" id="loginPassword" placeholder="••••••••••" required autocomplete="current-password">
+
+          <div class="row">
+            <label class="remember"><input type="checkbox" checked> Se souvenir de moi</label>
+            <a href="#" onclick="event.preventDefault(); showToast('La récupération du mot de passe sera bientôt disponible.', 'info');">Mot de passe oublié ?</a>
+          </div>
+
+          <button type="submit" class="btn btn-primary">Se connecter</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+  <script src="../js/login.js"></script>
+</body>
+</html>
