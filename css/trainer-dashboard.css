@@ -1,0 +1,9 @@
+@import url("./admin-dashboard.css");
+
+.topbar-title {
+  color: var(--accent);
+}
+
+.sidebar-section-title {
+  color: var(--accent);
+}
