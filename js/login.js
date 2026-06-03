@@ -1,63 +1,48 @@
-const users = [
-  {
-    id: "admin_1",
-    firstName: "Karim",
-    lastName: "Karray",
-    email: "k.karray@iccanada.ca",
-    role: "admin"
+const DEMO_ACCOUNTS = {
+  participant: {
+    email: "participant@example.com"
   },
-  {
-    id: "trainer_1",
-    firstName: "Leïla",
-    lastName: "Bensaïd",
-    email: "l.bensaid@iccanada.ca",
-    role: "trainer"
+  trainer: {
+    email: "trainer@example.com"
   },
-  {
-    id: "user_2",
-    firstName: "Sarah",
-    lastName: "Trabelsi",
-    email: "s.trabelsi@example.com",
-    role: "participant"
+  admin: {
+    email: "admin@example.com"
   }
-];
-
-const routesByRole = {
-  admin: "admin-dashboard.html",
-  trainer: "admin-dashboard.html",
-  participant: "admin-dashboard.html"
 };
 
-function getUser(userId) {
-  return users.find(user => user.id === userId);
-}
+function fillDemoAccount(role) {
+  const account = DEMO_ACCOUNTS[role];
+  if (!account) return;
 
-function handleLogin() {
   const emailInput = document.getElementById("loginEmail");
-  const email = emailInput.value.trim().toLowerCase();
-  const user = users.find(item => item.email.toLowerCase() === email);
+  const passwordInput = document.getElementById("loginPassword");
 
-  if (!user) {
-    showToast("Adresse e-mail introuvable. Utilisez les comptes de démo ci-dessus.", "danger");
-    emailInput.focus();
-    return;
-  }
+  emailInput.value = account.email;
+  passwordInput.value = "";
+  passwordInput.focus();
 
-  loginAs(user.id);
+  showToast(`Compte ${role} prêt. Saisis le mot de passe créé dans Supabase.`, "info");
 }
 
-function loginAs(userId) {
-  const user = getUser(userId);
-  if (!user) return;
+async function handleLogin() {
+  const emailInput = document.getElementById("loginEmail");
+  const passwordInput = document.getElementById("loginPassword");
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
 
-  sessionStorage.setItem("iccaCurrentUserId", user.id);
-  sessionStorage.setItem("iccaCurrentUserRole", user.role);
-  showToast(`Bienvenue ${user.firstName} !`, "success");
+  try {
+    const result = await window.signInWithSupabase(email, password);
+    const firstName = result.profile?.first_name || result.user?.email || "Utilisateur";
+    showToast(`Bienvenue ${firstName} !`, "success");
 
-  const target = routesByRole[user.role] || "admin-dashboard.html";
-  window.setTimeout(() => {
-    window.location.href = target;
-  }, 450);
+    window.setTimeout(() => {
+      window.location.href = result.redirectTo;
+    }, 450);
+  } catch (error) {
+    const message = error?.message || "La connexion a échoué.";
+    showToast(message, "danger");
+    passwordInput.focus();
+  }
 }
 
 function showToast(message, type = "info") {
@@ -73,6 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const emailInput = document.getElementById("loginEmail");
   const passwordInput = document.getElementById("loginPassword");
 
-  emailInput.value = "s.trabelsi@example.com";
-  passwordInput.value = "demo";
+  emailInput.value = DEMO_ACCOUNTS.participant.email;
+  passwordInput.value = "";
 });

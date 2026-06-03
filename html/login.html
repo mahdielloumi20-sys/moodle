@@ -55,9 +55,9 @@
         <div class="demo-accounts demo-access-block">
           <h3>Tester un profil</h3>
           <div class="demo-accounts-grid">
-            <button type="button" class="demo-btn" onclick="loginAs('user_2')">Participant</button>
-            <button type="button" class="demo-btn" onclick="loginAs('trainer_1')">Formateur</button>
-            <button type="button" class="demo-btn" onclick="loginAs('admin_1')">Administrateur</button>
+            <button type="button" class="demo-btn" onclick="fillDemoAccount('participant')">Participant</button>
+            <button type="button" class="demo-btn" onclick="fillDemoAccount('trainer')">Formateur</button>
+            <button type="button" class="demo-btn" onclick="fillDemoAccount('admin')">Administrateur</button>
           </div>
         </div>
 
@@ -80,6 +80,9 @@
   </main>
 
   <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+  <script src="../js/env.js"></script>
+  <script src="../js/supabase.js"></script>
+  <script src="../js/auth-supabase.js"></script>
   <script src="../js/login.js"></script>
 </body>
 </html>
