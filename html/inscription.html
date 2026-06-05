@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription - IC Canada Academy LMS</title>
+  <meta name="description" content="Créer un compte sur la plateforme IC Canada Academy LMS">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/inscription.css">
+</head>
+<body>
+  <a href="#registerForm" class="skip">Aller au formulaire d'inscription</a>
+
+  <main class="login-screen">
+    <aside class="login-hero" aria-label="Présentation IC Canada Academy">
+      <div class="login-hero-content">
+        <div class="login-emblem-white" aria-hidden="true">
+          <span>IC</span>
+          <strong>International Consulting Canada</strong>
+        </div>
+
+        <h1>Learning Platform</h1>
+        <p>
+          Rejoignez le Programme Jeunes Talents. Créez votre compte en quelques instants pour accéder à vos cours, vos cohortes et vos certifications.
+        </p>
+
+        <ul class="login-features">
+          <li>Accès immédiat aux 11 formations phares</li>
+          <li>Espace de suivi personnalisé et sécurisé</li>
+          <li>Interactions directes avec les formateurs</li>
+        </ul>
+      </div>
+
+      <div class="login-hero-footer">
+        IC Canada Academy LMS - Programme Jeunes Talents
+      </div>
+    </aside>
+
+    <section class="login-form-panel" aria-label="Inscription">
+      <div class="login-form">
+        <div class="login-logo-full" aria-hidden="true">
+          <span>IC</span>
+          <div>
+            <strong>Academy</strong>
+            <small>Learning Platform</small>
+          </div>
+        </div>
+
+        <h2>Inscription</h2>
+        <p class="sub">Créez votre profil de candidat</p>
+
+        <form id="registerForm" >
+          
+          <div class="form-row-grid">
+            <div>
+              <label for="regFirstName">Prénom</label>
+              <input type="text" id="regFirstName" placeholder="Noah" required autocomplete="given-name">
+            </div>
+            <div>
+              <label for="regLastName">Nom</label>
+              <input type="text" id="regLastName" placeholder="Smith" required autocomplete="family-name">
+            </div>
+          </div>
+
+          <label for="regEmail">Adresse e-mail</label>
+          <input type="email" id="regEmail" placeholder="noah.smith@example.com" required autocomplete="email">
+
+          <label for="regPhone">Numéro de téléphone</label>
+          <input type="tel" id="regPhone" placeholder="+216xxxxxxxx" required autocomplete="tel">
+
+          <label for="regPassword">Mot de passe</label>
+          <input type="password" id="regPassword" placeholder="••••••••••" required autocomplete="new-password">
+
+          <button type="submit" class="btn btn-primary">Créer mon compte</button>
+
+          <p class="signup-redirect">
+            Vous avez déjà un compte ? <a href="login.html">Se connecter</a>
+          </p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script src="../js/env.js"></script>
+
+  <script src="../js/supabase.js" type="module"></script>
+
+  <script src="../js/inscription.js" type="module"></script>
+</body>
+  
+  
+  <script src="../js/auth-supabase.js" type="module"></script>
+  
+</body>
+</html>
