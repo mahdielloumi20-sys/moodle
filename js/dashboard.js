@@ -147,7 +147,7 @@ const ICONS = {
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 3 7 12 12 21 7 12 2"></polygon><polyline points="3 12 12 17 21 12"></polyline><polyline points="3 17 12 22 21 17"></polyline></svg>',
   plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
   search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
-  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82l-.02.06a2 2 0 1 1-3.3 0l-.02-.06A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33l-.06.02a2 2 0 1 1 0-3.3l.06.02A1.65 1.65 0 0 0 4.6 9c0-.37-.13-.72-.33-1l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6c.32 0 .67-.13 1-.33a1.65 1.65 0 0 0 .33-1.82l.02-.06a2 2 0 1 1 3.3 0l.02.06A1.65 1.65 0 0 0 15 4.6c.37 0 .72.13 1 .33.27.2.48.48.6.82l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9c0 .37.13.72.33 1 .2.27.48.48.82.6l.06.02a2 2 0 1 1 0 3.3l-.06-.02A1.65 1.65 0 0 0 19.4 15Z"></path></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82l-.02.06a2 2 0 1 1-3.3 0l-.02-.06A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33l-.06.02a2 2 0 1 1 0-3.3l.06.02A1.65 1.65 0 0 0 4.6 9c0-.37-.13-.72-.33-1l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6c.32 0 .67-.13 1-.33a1.65 1.65 0 0 0 .33-1.82l.02-.06a2 2 0 1 1-3.3 0l-.02-.06A1.65 1.65 0 0 0 15 4.6c.37 0 .72.13 1 .33.27.2.48.48.6.82l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9c0 .37.13.72.33 1 .2.27.48.48.82.6l.06.02a2 2 0 1 1 0 3.3l-.06-.02A1.65 1.65 0 0 0 19.4 15Z"></path></svg>',
   shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
   trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>',
   upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
@@ -230,7 +230,7 @@ function renderAdminDashboard(uid = "admin_1") {
     <div class="breadcrumb"><span>Administration</span><span>Tableau de bord</span></div>
     <div class="page-header">
       <div>
-        <h1 class="page-title">Pilotage global</h1>
+        <h1 class="page-title">${icon("shield", 20)} Pilotage global</h1>
         <p class="page-subtitle">Vue d'ensemble de la plateforme IC Canada Academy LMS</p>
       </div>
       <div class="page-actions">
@@ -248,7 +248,7 @@ function renderAdminDashboard(uid = "admin_1") {
             <div class="alert-detail">
               ${pendingRequests > 0 ? `<strong>${pendingRequests}</strong> demande${pendingRequests > 1 ? "s" : ""} d'inscription` : ""}
               ${pendingRequests > 0 && pendingCourses > 0 ? " â€¢ " : ""}
-              ${pendingCourses > 0 ? `<strong>${pendingCourses}</strong> cours Ã  valider` : ""}
+              ${pendingCourses > 0 ? `<strong>${pendingCourses}</strong> cours Ã  valider` : ""}
             </div>
           </div>
           ${pendingRequests > 0 ? `<button class="btn btn-sm btn-secondary" onclick="navigate('requests')">Traiter les demandes</button>` : ""}
@@ -281,7 +281,7 @@ function renderAdminDashboard(uid = "admin_1") {
 
     <div class="grid-main">
       <div>
-        <div class="section-title"><h2>Inscriptions rÃ©centes</h2><a href="#" onclick="event.preventDefault(); navigate('enrollments')">Voir tout â†’</a></div>
+        <div class="section-title"><h2>Inscriptions rÃ©cents</h2><a href="#" onclick="event.preventDefault(); navigate('enrollments')">Voir tout â†’</a></div>
         <div class="table-wrap">
           <table class="table">
             <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th>Paiement</th></tr></thead>
@@ -531,8 +531,7 @@ const trainerEvaluations = [
 const trainerSubmissions = [
   { id: "sub_1", userId: "user_2", courseId: "course_admin_digitale", title: "Livrable 1 - Tableau de suivi", kind: "devoir", status: "submitted", submittedAt: "2026-06-20T10:15:00" },
   { id: "sub_2", userId: "user_4", courseId: "course_video", title: "Document de travail", kind: "autre", status: "submitted", submittedAt: "2026-06-21T14:30:00" },
-  { id: "sub_3", userId: "user_6", courseId: "course_bi_data", title: "Dashboard Power BI - V1", kind: "devoir", status: "graded", submittedAt: "2026-06-19T11:40:00" },
-  { id: "sub_4", userId: "user_2", courseId: "course_gp_transfo", title: "Backlog priorisé", kind: "devoir", status: "submitted", submittedAt: "2026-06-22T09:00:00" }
+  { id: "sub_3", userId: "user_6", courseId: "course_bi_data", title: "Dashboard Power BI - V1", kind: "devoir" }
 ];
 
 const submissions = trainerSubmissions;
@@ -623,10 +622,15 @@ function setupWorkspaceShell(role) {
     </div>
     <div class="user-chip" aria-label="${currentUser.role === "trainer" ? "Formateur connecté" : "Administrateur connecté"}">
       <span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span>
-      <span>${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim())}</span>
+      <!-- AJOUT DE LA CLASSE 'user-name' ICI POUR PERMETTRE LA SYNCHRONISATION SUPABASE -->
+      <span class="user-name">${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim())}</span>
     </div>
   `;
+  
   document.title = role === "trainer" ? "Formateur - Tableau de bord" : "Administration - Tableau de bord";
+  
+  // Exécution de la synchronisation dynamique avec Supabase
+  syncUserChip();
 }
 
 function trainerCourseCard(course, uid) {
@@ -1859,3 +1863,37 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeModal();
 });
+
+
+async function syncUserChip() {
+  try {
+    const { data: { session } } = await window.supabaseInstance.auth.getSession();
+    if (!session?.user) return;
+
+    // Récupération du profil réel depuis Supabase
+    const { data: profile } = await window.supabaseInstance
+      .from('profiles')
+      .select('first_name, last_name')
+      .eq('id', session.user.id)
+      .single();
+
+    // Fallback sur les métadonnées au cas où la table profiles est vide
+    const fName = profile?.first_name || session.user.user_metadata?.first_name || "";
+    const lName = profile?.last_name || session.user.user_metadata?.last_name || "";
+    const fullName = `${fName} ${lName}`.trim();
+
+    // Sélection précise des éléments dans ta topbar
+    const nameEl = document.querySelector(".user-chip .user-name");
+    const avatarEl = document.querySelector(".user-chip .avatar");
+
+    if (nameEl && fullName) {
+      nameEl.textContent = fullName;
+    }
+    
+    if (avatarEl && fName && lName) {
+      avatarEl.textContent = `${fName.charAt(0)}${lName.charAt(0)}`.toUpperCase();
+    }
+  } catch (err) {
+    console.warn("Erreur de synchronisation du User Chip:", err.message);
+  }
+}
