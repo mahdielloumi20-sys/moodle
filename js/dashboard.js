@@ -1,9 +1,69 @@
-﻿const users = [
+﻿function injectTopbar() {
+    if (document.querySelector('.topbar')) return;
+
+    const header = document.createElement('header');
+    header.className = 'topbar';
+    header.innerHTML = `
+        <div class="topbar-left">
+            <button class="menu-toggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+            <a href="#" class="brand">
+                <div class="brand-mark"><img src="../assets/ic_logo.png"></div>
+                <div class="brand-text" style="margin-top:25px;">
+                    <span class="brand-text-1">IC Canada Academy</span>
+                    <span class="brand-text-2">Learning Platform</span>
+                </div>
+            </a>
+        </div>
+
+        <div class="topbar-center">
+        <div class="switcher">
+                <button class="active" data-role="participant">Participant</button>
+                <button data-role="trainer">Formateur</button>
+                <button data-role="admin">Admin</button>
+            </div>
+            <div class="topbar-search">
+                <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Rechercher une formation...">
+            </div>
+            
+        </div>
+
+        <div class="topbar-right">
+        <button class="icon-btn"><span class="dot"></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
+            <div class="user-chip">
+                <div class="avatar">--</div>
+                <span class="user-name">Chargement...</span>
+            </div>
+            </div>
+    `;
+    document.body.prepend(header);
+    initSwitcherLogic();
+}
+function initSwitcherLogic() {
+    const buttons = document.querySelectorAll('.switcher button');
+    
+    buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            // 1. Mise à jour UI des boutons
+            buttons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // 2. Chargement du dashboard correspondant
+            const role = btn.getAttribute('data-role');
+            
+            // Appelle votre fonction de rendu existante
+            renderWorkspacePage(role, 'dashboard');
+            
+            // Rafraîchit le shell (Sidebar + Topbar Text) pour le nouveau rôle
+            setupWorkspaceShell(role);
+        });
+    });
+}
+const users = [
   { id: "admin_1", firstName: "Karim", lastName: "Karray", role: "admin", avatar: "KK" },
   { id: "trainer_1", firstName: "LeÃ¯la", lastName: "BensaÃ¯d", role: "trainer", avatar: "LB" },
   { id: "trainer_2", firstName: "Marc", lastName: "Tremblay", role: "trainer", avatar: "MT" },
   { id: "user_1", firstName: "Ahmed", lastName: "Belkadi", role: "participant", avatar: "AB" },
-  { id: "user_2", firstName: "Sarah", lastName: "Trabelsi", role: "participant", avatar: "ST" },
   { id: "user_3", firstName: "Mohamed", lastName: "Cherni", role: "participant", avatar: "MC" },
   { id: "user_4", firstName: "Julie", lastName: "Lavoie", role: "participant", avatar: "JL" },
   { id: "user_5", firstName: "Yasmine", lastName: "Khalfallah", role: "participant", avatar: "YK" },
@@ -287,9 +347,9 @@ function renderAdminDashboard(uid = "admin_1") {
             <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th>Paiement</th></tr></thead>
             <tbody>
               ${enrollments.slice(-5).reverse().map(enrollment => {
-                const user = getUser(enrollment.userId);
-                const course = getCourse(enrollment.courseId);
-                return `
+    const user = getUser(enrollment.userId);
+    const course = getCourse(enrollment.courseId);
+    return `
                   <tr>
                     <td><div class="person-cell"><span class="avatar">${user ? user.avatar : "?"}</span><strong>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</strong></div></td>
                     <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -297,7 +357,7 @@ function renderAdminDashboard(uid = "admin_1") {
                     <td>${paymentStatusLabel(effectivePaymentStatus(enrollment))}</td>
                   </tr>
                 `;
-              }).join("")}
+  }).join("")}
             </tbody>
           </table>
         </div>
@@ -309,9 +369,9 @@ function renderAdminDashboard(uid = "admin_1") {
               <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th></th></tr></thead>
               <tbody>
                 ${getRequestsByStatus("pending").slice(0, 5).map(request => {
-                  const user = getUser(request.userId);
-                  const course = getCourse(request.courseId);
-                  return `
+    const user = getUser(request.userId);
+    const course = getCourse(request.courseId);
+    return `
                     <tr>
                       <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                       <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -319,7 +379,7 @@ function renderAdminDashboard(uid = "admin_1") {
                       <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${request.id}')">${icon("eye", 13)} Examiner</button></td>
                     </tr>
                   `;
-                }).join("")}
+  }).join("")}
               </tbody>
             </table>
           </div>
@@ -330,8 +390,8 @@ function renderAdminDashboard(uid = "admin_1") {
         <div class="card">
           <h3 class="card-title">${icon("clock", 18)} ActivitÃ© rÃ©cente</h3>
           ${activityLog.slice(0, 6).map(log => {
-            const actor = getUser(log.actorId);
-            return `
+    const actor = getUser(log.actorId);
+    return `
               <div class="activity-item">
                 <span class="activity-dot"></span>
                 <div class="activity-content">
@@ -340,7 +400,7 @@ function renderAdminDashboard(uid = "admin_1") {
                 </div>
               </div>
             `;
-          }).join("")}
+  }).join("")}
         </div>
 
         <div class="card" style="margin-top:18px;">
@@ -602,33 +662,31 @@ function setupWorkspaceShell(role) {
   ];
 
   sidebar.innerHTML = `
-    <div class="brand">
-      <div class="brand-mark">IC</div>
-      <div>
-        <strong>IC Canada Academy</strong>
-        <span>${brandLine}</span>
-      </div>
-    </div>
-    <div class="sidebar-section-title">${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
+    
+    <div class="sidebar-section-title" style="margin-top: 35px;">${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
     <nav class="nav-list">
       ${navItems.map(([view, label], index) => `<a class="nav-item${index === 0 ? " active" : ""}" href="#" data-view="${view}" ${index === 0 ? 'aria-current="page"' : ""}>${label}</a>`).join("")}
     </nav>
   `;
 
-  topbar.innerHTML = `
-    <div>
-      <div class="topbar-kicker">${roleLabel}</div>
-      <div class="topbar-title">${role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents"}</div>
-    </div>
-    <div class="user-chip" aria-label="${currentUser.role === "trainer" ? "Formateur connecté" : "Administrateur connecté"}">
-      <span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span>
-      <!-- AJOUT DE LA CLASSE 'user-name' ICI POUR PERMETTRE LA SYNCHRONISATION SUPABASE -->
-      <span class="user-name">${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim())}</span>
-    </div>
-  `;
-  
+  const kickerEl = topbar.querySelector(".topbar-kicker"); // Assurez-vous que cette classe existe dans votre HTML injecté
+  const titleEl = topbar.querySelector(".topbar-title");
+  const nameEl = topbar.querySelector(".user-name");
+  const avatarEl = topbar.querySelector(".avatar");
+
+  // On met à jour le texte uniquement s'ils existent
+  if (kickerEl) kickerEl.textContent = roleLabel;
+  if (titleEl) titleEl.textContent = role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents";
+
+  if (nameEl) {
+    nameEl.textContent = `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim();
+  }
+  if (avatarEl) {
+    avatarEl.textContent = currentUser.avatar || (currentUser.firstName?.[0] || "IC");
+  }
+
   document.title = role === "trainer" ? "Formateur - Tableau de bord" : "Administration - Tableau de bord";
-  
+
   // Exécution de la synchronisation dynamique avec Supabase
   syncUserChip();
 }
@@ -699,11 +757,11 @@ function renderAdminTracking() {
     <div class="grid-main">
       <div>
         ${courses.filter(course => course.status === "published").map(course => {
-          const participants = getCourseParticipants(course.id);
-          const visible = !courseFilter || course.id === courseFilter;
-          if (!visible) return "";
-          const avg = participants.length ? Math.round(participants.reduce((sum, item) => sum + item.progress, 0) / participants.length) : 0;
-          return `
+    const participants = getCourseParticipants(course.id);
+    const visible = !courseFilter || course.id === courseFilter;
+    if (!visible) return "";
+    const avg = participants.length ? Math.round(participants.reduce((sum, item) => sum + item.progress, 0) / participants.length) : 0;
+    return `
             <div class="card" style="margin-bottom:16px;">
               <div class="card-title">${icon("book", 18)} ${escapeHTML(course.title)}</div>
               <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:12px;">
@@ -727,15 +785,15 @@ function renderAdminTracking() {
               </div>
             </div>
           `;
-        }).join("") || '<div class="empty-state"><h3>Aucune donnée pour ce filtre</h3><p>Sélectionnez une autre formation ou un autre groupe.</p></div>'}
+  }).join("") || '<div class="empty-state"><h3>Aucune donnée pour ce filtre</h3><p>Sélectionnez une autre formation ou un autre groupe.</p></div>'}
       </div>
 
       <div>
         <div class="card">
           <h3 class="card-title">${icon("layers", 18)} Cohortes</h3>
           ${groups.map(group => {
-            const course = getCourse(group.courseId);
-            return `
+    const course = getCourse(group.courseId);
+    return `
               <div class="activity-item">
                 <span class="activity-dot"></span>
                 <div class="activity-content">
@@ -744,7 +802,7 @@ function renderAdminTracking() {
                 </div>
               </div>
             `;
-          }).join("")}
+  }).join("")}
         </div>
       </div>
     </div>
@@ -777,10 +835,10 @@ function renderAdminUsers() {
         <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Formation(s)</th><th></th></tr></thead>
         <tbody>
           ${filteredUsers.map(user => {
-            const enrollCount = enrollments.filter(enrollment => enrollment.userId === user.id).length;
-            const roleClass = user.role === "admin" ? "badge badge--danger" : user.role === "trainer" ? "badge badge--info" : "badge badge--success";
-            const roleLabel = user.role === "admin" ? "Admin" : user.role === "trainer" ? "Formateur" : "Participant";
-            return `
+    const enrollCount = enrollments.filter(enrollment => enrollment.userId === user.id).length;
+    const roleClass = user.role === "admin" ? "badge badge--danger" : user.role === "trainer" ? "badge badge--info" : "badge badge--success";
+    const roleLabel = user.role === "admin" ? "Admin" : user.role === "trainer" ? "Formateur" : "Participant";
+    return `
               <tr>
                 <td><div class="person-cell"><span class="avatar">${user.avatar}</span><strong>${escapeHTML(`${user.firstName} ${user.lastName}`)}</strong></div></td>
                 <td><span class="${roleClass}">${roleLabel}</span></td>
@@ -788,7 +846,7 @@ function renderAdminUsers() {
                 <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation du compte ${escapeHTML(user.firstName)}', 'info')">${icon("eye", 13)} Voir</button></td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -875,9 +933,9 @@ function renderAdminRequests() {
         <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th></th></tr></thead>
         <tbody>
           ${pendingRequests.map(request => {
-            const user = getUser(request.userId);
-            const course = getCourse(request.courseId);
-            return `
+    const user = getUser(request.userId);
+    const course = getCourse(request.courseId);
+    return `
               <tr>
                 <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                 <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -885,7 +943,7 @@ function renderAdminRequests() {
                 <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${request.id}')">${icon("eye", 13)} Examiner</button></td>
               </tr>
             `;
-          }).join("") || '<tr><td colspan="4"><div class="empty-state"><h3>Aucune demande</h3><p>Tout est à jour.</p></div></td></tr>'}
+  }).join("") || '<tr><td colspan="4"><div class="empty-state"><h3>Aucune demande</h3><p>Tout est à jour.</p></div></td></tr>'}
         </tbody>
       </table>
     </div>
@@ -906,9 +964,9 @@ function renderAdminEnrollments() {
         <thead><tr><th>Participant</th><th>Formation</th><th>Progression</th><th>Paiement</th></tr></thead>
         <tbody>
           ${enrollments.map(enrollment => {
-            const user = getUser(enrollment.userId);
-            const course = getCourse(enrollment.courseId);
-            return `
+    const user = getUser(enrollment.userId);
+    const course = getCourse(enrollment.courseId);
+    return `
               <tr>
                 <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                 <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -916,7 +974,7 @@ function renderAdminEnrollments() {
                 <td>${paymentStatusLabel(enrollment.paymentStatus)}</td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -939,15 +997,15 @@ function renderAdminGroups() {
           <thead><tr><th>Groupe</th><th>Formation</th><th>Membres</th></tr></thead>
           <tbody>
             ${groups.map(group => {
-              const course = getCourse(group.courseId);
-              return `
+    const course = getCourse(group.courseId);
+    return `
                 <tr>
                   <td><strong>${escapeHTML(group.name)}</strong></td>
                   <td>${course ? escapeHTML(course.title) : "-"}</td>
                   <td>${group.members.length}</td>
                 </tr>
               `;
-            }).join("")}
+  }).join("")}
           </tbody>
         </table>
       </div>
@@ -1003,16 +1061,16 @@ function renderAdminCertificates() {
         <thead><tr><th>Participant</th><th>Formation</th><th>Éligibilité</th></tr></thead>
         <tbody>
           ${eligible.map(enrollment => {
-            const user = getUser(enrollment.userId);
-            const course = getCourse(enrollment.courseId);
-            return `
+    const user = getUser(enrollment.userId);
+    const course = getCourse(enrollment.courseId);
+    return `
               <tr>
                 <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                 <td>${course ? escapeHTML(course.title) : "-"}</td>
                 <td>${renderStatusBadge("approved")}</td>
               </tr>
             `;
-          }).join("") || '<tr><td colspan="3"><div class="empty-state"><h3>Aucun participant éligible</h3><p>La progression minimale n’est pas encore atteinte.</p></div></td></tr>'}
+  }).join("") || '<tr><td colspan="3"><div class="empty-state"><h3>Aucun participant éligible</h3><p>La progression minimale n’est pas encore atteinte.</p></div></td></tr>'}
         </tbody>
       </table>
     </div>
@@ -1054,8 +1112,8 @@ function renderAdminActivity() {
     </div>
     <div class="card">
       ${activityLog.map(entry => {
-        const actor = getUser(entry.actorId);
-        return `
+    const actor = getUser(entry.actorId);
+    return `
           <div class="activity-item">
             <span class="activity-dot"></span>
             <div class="activity-content">
@@ -1064,7 +1122,7 @@ function renderAdminActivity() {
             </div>
           </div>
         `;
-      }).join("")}
+  }).join("")}
     </div>
   `;
 }
@@ -1103,8 +1161,8 @@ function renderTrainerDashboard(uid) {
         <div class="card">
           <h3 class="card-title">${icon("clock", 18)} Agenda proche</h3>
           ${trainerSessions.map(session => {
-            const course = getCourse(session.courseId);
-            return `
+    const course = getCourse(session.courseId);
+    return `
               <div class="activity-item">
                 <span class="activity-dot"></span>
                 <div class="activity-content">
@@ -1113,7 +1171,7 @@ function renderTrainerDashboard(uid) {
                 </div>
               </div>
             `;
-          }).join("")}
+  }).join("")}
         </div>
         <div class="card" style="margin-top:16px;">
           <h3 class="card-title">${icon("zap", 18)} Actions rapides</h3>
@@ -1161,9 +1219,9 @@ function renderTrainerCourses(uid) {
         <thead><tr><th>Cours</th><th>Participants</th><th>Remises</th><th></th></tr></thead>
         <tbody>
           ${trainerCourses.map(course => {
-            const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
-            const pending = trainerSubmissions.filter(sub => sub.courseId === course.id && sub.status === "submitted").length;
-            return `
+    const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
+    const pending = trainerSubmissions.filter(sub => sub.courseId === course.id && sub.status === "submitted").length;
+    return `
               <tr>
                 <td><strong>${escapeHTML(course.title)}</strong></td>
                 <td>${participants.length}</td>
@@ -1173,7 +1231,7 @@ function renderTrainerCourses(uid) {
                 </td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -1192,8 +1250,8 @@ function renderTrainerCalendar(uid) {
     </div>
     <div class="card">
       ${trainerSessions.filter(session => trainerCourses.some(course => course.id === session.courseId)).map(session => {
-        const course = getCourse(session.courseId);
-        return `
+    const course = getCourse(session.courseId);
+    return `
           <div class="activity-item">
             <span class="activity-dot"></span>
             <div class="activity-content">
@@ -1202,7 +1260,7 @@ function renderTrainerCalendar(uid) {
             </div>
           </div>
         `;
-      }).join("") || trainerEmptyState("Aucun événement", "Aucune séance n'est planifiée pour vos cours.")}
+  }).join("") || trainerEmptyState("Aucun événement", "Aucune séance n'est planifiée pour vos cours.")}
     </div>
   `;
 }
@@ -1233,8 +1291,8 @@ function renderTrainerEvaluations(uid) {
         <thead><tr><th>Évaluation</th><th>Cours</th><th>Statut</th><th></th></tr></thead>
         <tbody>
           ${visible.map(item => {
-            const course = getCourse(item.courseId);
-            return `
+    const course = getCourse(item.courseId);
+    return `
               <tr>
                 <td><strong>${escapeHTML(item.title)}</strong></td>
                 <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -1242,7 +1300,7 @@ function renderTrainerEvaluations(uid) {
                 <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="showToast('Ouverture de ${escapeHTML(item.title)}', 'info')">${icon("eye", 13)} Voir</button></td>
               </tr>
             `;
-          }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune évaluation", "Aucun élément ne correspond à l'onglet sélectionné.")}</td></tr>`}
+  }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune évaluation", "Aucun élément ne correspond à l'onglet sélectionné.")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1265,9 +1323,9 @@ function renderTrainerCorrections(uid) {
       <div class="card">
         <h3 class="card-title">${icon("upload", 18)} À corriger</h3>
         ${pending.map(sub => {
-          const user = getUser(sub.userId);
-          const course = getCourse(sub.courseId);
-          return `
+    const user = getUser(sub.userId);
+    const course = getCourse(sub.courseId);
+    return `
             <div class="activity-item">
               <span class="activity-dot"></span>
               <div class="activity-content">
@@ -1276,13 +1334,13 @@ function renderTrainerCorrections(uid) {
               </div>
             </div>
           `;
-        }).join("") || trainerEmptyState("Aucun devoir en attente", "Toutes les remises de devoirs ont déjà été traitées.")}
+  }).join("") || trainerEmptyState("Aucun devoir en attente", "Toutes les remises de devoirs ont déjà été traitées.")}
       </div>
       <div class="card">
         <h3 class="card-title">${icon("check", 18)} Récemment corrigés</h3>
         ${graded.map(sub => {
-          const user = getUser(sub.userId);
-          return `
+    const user = getUser(sub.userId);
+    return `
             <div class="activity-item">
               <span class="activity-dot"></span>
               <div class="activity-content">
@@ -1291,7 +1349,7 @@ function renderTrainerCorrections(uid) {
               </div>
             </div>
           `;
-        }).join("") || trainerEmptyState("Aucun devoir corrigé", "Aucune correction récente n'est disponible.")}
+  }).join("") || trainerEmptyState("Aucun devoir corrigé", "Aucune correction récente n'est disponible.")}
       </div>
     </div>
   `;
@@ -1313,8 +1371,8 @@ function renderTrainerRemises(uid) {
         <thead><tr><th>Participant</th><th>Remise</th><th>Type</th><th>Statut</th></tr></thead>
         <tbody>
           ${submissions.map(sub => {
-            const user = getUser(sub.userId);
-            return `
+    const user = getUser(sub.userId);
+    return `
               <tr>
                 <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                 <td><strong>${escapeHTML(sub.title)}</strong></td>
@@ -1322,7 +1380,7 @@ function renderTrainerRemises(uid) {
                 <td>${renderStatusBadge(sub.status)}</td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -1374,16 +1432,16 @@ function renderTrainerTracking(uid) {
     </div>
     <div class="grid-2">
       ${trainerCourses.map(course => {
-        const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
-        const avg = participants.length ? Math.round(participants.reduce((sum, enrollment) => sum + getCourseProgress(enrollment.userId, enrollment.courseId), 0) / participants.length) : 0;
-        return `
+    const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
+    const avg = participants.length ? Math.round(participants.reduce((sum, enrollment) => sum + getCourseProgress(enrollment.userId, enrollment.courseId), 0) / participants.length) : 0;
+    return `
           <div class="card">
             <div class="card-title">${icon("chart", 18)} ${escapeHTML(course.title)}</div>
             <div class="kpi-value" style="font-size:28px;">${avg}%</div>
             <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin-top:10px;"><div class="progress-bar-fill" style="width:${avg}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
           </div>
         `;
-      }).join("")}
+  }).join("")}
     </div>
   `;
 }
@@ -1426,8 +1484,8 @@ function renderTrainerSubmissions(uid) {
         <thead><tr><th>Participant</th><th>Élément</th><th>Type</th><th>Statut</th></tr></thead>
         <tbody>
           ${items.map(item => {
-            const user = getUser(item.userId);
-            return `
+    const user = getUser(item.userId);
+    return `
               <tr>
                 <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
                 <td>${escapeHTML(item.title)}</td>
@@ -1435,7 +1493,7 @@ function renderTrainerSubmissions(uid) {
                 <td>${renderStatusBadge(item.status)}</td>
               </tr>
             `;
-          }).join("")}
+  }).join("")}
         </tbody>
       </table>
     </div>
@@ -1553,8 +1611,8 @@ function renderParticipantDashboard(uid) {
         <div class="card" style="margin-top:16px;">
           <h3 class="card-title">${icon("award", 18)} Certificats</h3>
           ${certificates.filter(cert => cert.userId === uid).map(cert => {
-            const course = getCourse(cert.courseId);
-            return `
+    const course = getCourse(cert.courseId);
+    return `
               <div class="activity-item">
                 <span class="activity-dot"></span>
                 <div class="activity-content">
@@ -1563,7 +1621,7 @@ function renderParticipantDashboard(uid) {
                 </div>
               </div>
             `;
-          }).join("") || trainerEmptyState("Aucun certificat", "Vos certificats apparaîtront ici une fois vos parcours terminés.")}
+  }).join("") || trainerEmptyState("Aucun certificat", "Vos certificats apparaîtront ici une fois vos parcours terminés.")}
         </div>
       </div>
     </div>
@@ -1598,8 +1656,8 @@ function renderParticipantAssignments(uid) {
         <thead><tr><th>Remise</th><th>Formation</th><th>Type</th><th>Statut</th></tr></thead>
         <tbody>
           ${items.map(item => {
-            const course = getCourse(item.courseId);
-            return `
+    const course = getCourse(item.courseId);
+    return `
               <tr>
                 <td><strong>${escapeHTML(item.title)}</strong></td>
                 <td>${course ? escapeHTML(course.title) : "-"}</td>
@@ -1607,7 +1665,7 @@ function renderParticipantAssignments(uid) {
                 <td>${renderStatusBadge(item.status)}</td>
               </tr>
             `;
-          }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune remise", "Déposez votre premier document pour voir ici son état.")}</td></tr>`}
+  }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune remise", "Déposez votre premier document pour voir ici son état.")}</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -1621,14 +1679,14 @@ function renderParticipantCertificates(uid) {
     <div class="page-header"><div><h1 class="page-title">Certificats</h1><p class="page-subtitle">Vos attestations et certificats obtenus.</p></div></div>
     <div class="grid-2">
       ${items.map(cert => {
-        const course = getCourse(cert.courseId);
-        return `
+    const course = getCourse(cert.courseId);
+    return `
           <div class="card">
             <div class="card-title">${icon("award", 18)} ${course ? escapeHTML(course.title) : "Certificat"}</div>
             <div class="settings-note">Émis le ${fmtDate(cert.issueDate)}</div>
           </div>
         `;
-      }).join("") || trainerEmptyState("Aucun certificat", "Terminez vos formations pour obtenir un certificat.")}
+  }).join("") || trainerEmptyState("Aucun certificat", "Terminez vos formations pour obtenir un certificat.")}
     </div>
   `;
 }
@@ -1857,6 +1915,7 @@ document.addEventListener("click", event => {
 });
 
 document.addEventListener("DOMContentLoaded", () => {
+  injectTopbar();
   renderWorkspacePage(getWorkspaceRole(), "dashboard");
 });
 
@@ -1889,7 +1948,7 @@ async function syncUserChip() {
     if (nameEl && fullName) {
       nameEl.textContent = fullName;
     }
-    
+
     if (avatarEl && fName && lName) {
       avatarEl.textContent = `${fName.charAt(0)}${lName.charAt(0)}`.toUpperCase();
     }
