@@ -34,7 +34,6 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-// ... (Tu gardes tout ton code existant au-dessus : getSupabaseConfig, getSupabaseUrl, etc.)
 
 try {
   // 1. On récupère proprement l'URL et la clé nettoyées
@@ -50,3 +49,26 @@ try {
 } catch (error) {
   console.error("Erreur lors de l'initialisation du client Supabase :", error.message);
 }
+// Récupère le profil complet de l'utilisateur connecté
+window.fetchCurrentProfile = async function () {
+  const { data: { session } } = await window.supabaseInstance.auth.getSession();
+  if (!session?.user) return null;
+
+  const { data, error } = await window.supabaseInstance
+    .from('profiles')
+    .select('id, email, first_name, last_name, role, phone')
+    .eq('id', session.user.id)
+    .single();
+
+  if (error) { console.warn('fetchCurrentProfile:', error.message); return null; }
+  return data;
+};
+
+// Récupère tous les profils (pour admin)
+window.fetchAllProfiles = async function () {
+  const { data, error } = await window.supabaseInstance
+    .from('profiles')
+    .select('id, email, first_name, last_name, role, phone, created_at');
+  if (error) { console.warn('fetchAllProfiles:', error.message); return []; }
+  return data || [];
+};
