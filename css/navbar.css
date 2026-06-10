@@ -250,3 +250,43 @@
     /* Texte blanc pour le contraste */
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
+
+/* Style de base de la sidebar (ajustez selon votre code actuel) */
+
+/* Classe pour cacher la sidebar */
+/* 1. État de base de la sidebar : elle doit écouter les transitions */
+.sidebar {
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+/* 2. Quand le parent a la classe collapsed, on applique l'animation et le Grid */
+.app-shell.sidebar-collapsed {
+    /* Au lieu de 0, on utilise 0px pour le grid (ou on laisse le transform gérer) */
+    grid-template-columns: 0px minmax(0, 1fr);
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+    transform: translateX(-100%); /* Sort de l'écran fluidement */
+    opacity: 0;                   /* Optionnel: s'efface en douceur pour éviter les bugs visuels */
+    pointer-events: none;         /* Empêche de cliquer sur les liens masqués */
+}
+
+/* --- Ton code pour le main-shell (qui est super, on n'y touche pas) --- */
+.main-shell {
+    transition: all .3s ease;
+    padding: 32px 24px; /* Un peu plus d'espace vertical au passage */
+}
+
+.main-shell.expanded {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* C'est ici qu'on donne de l'espace pour éviter l'effet "squeezed" */
+.main-shell > * {
+    max-width: 1400px; /* Augmenté de 1200px à 1400px pour laisser respirer les cartes */
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    padding: 0 16px;   /* Sécurité pour que ça ne colle pas aux bords d'écran */
+}
