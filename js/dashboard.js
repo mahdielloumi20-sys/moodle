@@ -8,15 +8,19 @@ function injectTopbar() {
   header.className = 'topbar';
   header.innerHTML = `
     <div class="topbar-left">
-      <button class="menu-toggle"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-      <a href="#" class="brand">
-        <div class="brand-mark"><img src="../assets/ic_logo.png"></div>
-        <div class="brand-text" style="margin-top:25px;">
-          <span class="brand-text-1">IC Canada Academy</span>
-          <span class="brand-text-2">Learning Platform</span>
+            <button class="menu-toggle" id="toggleSidebar">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
+            <a href="#" class="brand">
+                <div class="brand-mark"><img src="../assets/ic_logo.png"></div>
+                <div class="brand-text" style="margin-top:25px;">
+                    <span class="brand-text-1">IC Canada Academy</span>
+                    <span class="brand-text-2">Learning Platform</span>
+                </div>
+            </a>
         </div>
-      </a>
-    </div>
     <div class="topbar-center">
       <div class="switcher">
         <button class="active" data-role="participant">Participant</button>
@@ -37,6 +41,17 @@ function injectTopbar() {
     </div>
   `;
   document.body.prepend(header);
+  // À l'intérieur de la fonction injectTopbar()
+document.getElementById('toggleSidebar').addEventListener('click', () => {
+    const sidebar = document.querySelector('.sidebar');
+    const mainShell = document.querySelector('.main-shell');
+    const appShell = document.querySelector('.app-shell');
+
+    if (sidebar) sidebar.classList.toggle('hidden');
+    if (mainShell) mainShell.classList.toggle('expanded');
+    if (appShell) appShell.classList.toggle('sidebar-collapsed');
+});
+
   initSwitcherLogic();
 }
 
@@ -1558,7 +1573,7 @@ function setupWorkspaceShell(role) {
   ];
 
   sidebar.innerHTML = `
-    <div class="sidebar-section-title" style="margin-top: 35px;">${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
+    <div class="sidebar-section-title" >${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
     <nav class="nav-list">
       ${navItems.map(([view, label], i) => `<a class="nav-item${i === 0 ? " active" : ""}" href="#" data-view="${view}" ${i === 0 ? 'aria-current="page"' : ""}>${label}</a>`).join("")}
     </nav>
