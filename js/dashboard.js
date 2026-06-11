@@ -3,14 +3,14 @@
   { id: "trainer_1", firstName: "LeÃ¯la", lastName: "BensaÃ¯d", role: "trainer", avatar: "LB" },
   { id: "trainer_2", firstName: "Marc", lastName: "Tremblay", role: "trainer", avatar: "MT" },
   { id: "user_1", firstName: "Ahmed", lastName: "Belkadi", role: "participant", avatar: "AB" },
-  { id: "user_2", firstName: "Sarah", lastName: "Trabelsi", role: "participant", avatar: "ST" },
+  { id: "user_2", firstName: "Ali", lastName: "Utilisateur", role: "participant", avatar: "AU" },
   { id: "user_3", firstName: "Mohamed", lastName: "Cherni", role: "participant", avatar: "MC" },
   { id: "user_4", firstName: "Julie", lastName: "Lavoie", role: "participant", avatar: "JL" },
   { id: "user_5", firstName: "Yasmine", lastName: "Khalfallah", role: "participant", avatar: "YK" },
   { id: "user_6", firstName: "Pierre", lastName: "Gagnon", role: "participant", avatar: "PG" }
 ];
 
-const courses = [
+let courses = [
   { id: "course_admin_digitale", title: "Consultant - Administration digitale", status: "published" },
   { id: "course_bi_data", title: "Consultant - BI & Data Analytics", status: "published" },
   { id: "course_gp_transfo", title: "Consultant - Gestion de projet et Transformation numÃ©rique", status: "published" },
@@ -24,7 +24,7 @@ const courses = [
   { id: "course_ecommerce", title: "Consultant - E-commerce", status: "published" }
 ];
 
-const enrollments = [
+let enrollments = [
   { id: "enr_1", userId: "user_2", courseId: "course_admin_digitale", paymentStatus: "paid", enrollmentDate: "2026-06-15" },
   { id: "enr_2", userId: "user_2", courseId: "course_bi_data", paymentStatus: "paid", enrollmentDate: "2026-06-15" },
   { id: "enr_3", userId: "user_2", courseId: "course_gp_transfo", paymentStatus: "paid", enrollmentDate: "2026-06-15" },
@@ -36,28 +36,24 @@ const enrollments = [
   { id: "enr_9", userId: "user_6", courseId: "course_cyber", paymentStatus: "paid", enrollmentDate: "2026-06-20" }
 ];
 
-const enrollmentRequests = [
+let enrollmentRequests = [
   { id: "req_1", userId: "user_1", courseId: "course_ia_productivite", requestedAt: "2026-06-18", status: "pending" },
   { id: "req_2", userId: "user_3", courseId: "course_nocode", requestedAt: "2026-06-19", status: "pending" },
   { id: "req_3", userId: "user_6", courseId: "course_freelance", requestedAt: "2026-06-15", status: "approved" }
 ];
 
-const payments = [
-  ...Array.from({ length: 19 }, (_, index) => ({
-    id: `pay_${index + 1}`,
-    amount: index === 18 ? 500 : 300,
-    status: "paid"
-  })),
+let payments = [
+  ...Array.from({ length: 19 }, (_, i) => ({ id: `pay_${i + 1}`, amount: i === 18 ? 500 : 300, status: "paid" })),
   { id: "pay_pending_1", amount: 300, status: "pending" },
   { id: "pay_pending_2", amount: 300, status: "pending" },
   { id: "pay_pending_3", amount: 300, status: "pending" }
 ];
 
-const certificates = [
+let certificates = [
   { id: "cert_1", userId: "user_2", courseId: "course_admin_digitale", issueDate: "2026-08-12" }
 ];
 
-const activityLog = [
+let activityLog = [
   { id: "log_1", at: "2026-06-01T09:00:00", actorId: "admin_1", details: "Publication des 11 formations du Programme Jeunes Talents dans le LMS." },
   { id: "log_2", at: "2026-06-15T14:30:00", actorId: "admin_1", details: "Sarah inscrite au parcours complet Jeunes Talents." },
   { id: "log_3", at: "2026-08-12T10:00:00", actorId: "trainer_1", details: "Certificat Administration digitale Ã©mis pour Sarah." }
@@ -157,25 +153,269 @@ const ICONS = {
   zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>'
 };
 
-function icon(name, size = 18) {
-  const svg = ICONS[name] || ICONS.alertCircle;
-  return `<span class="nav-icon" style="display:inline-grid;place-items:center;width:${size}px;height:${size}px">${svg.replace("<svg ", `<svg width="${size}" height="${size}" `)}</span>`;
+let trainerSessions = [
+  { id: "ses_1", courseId: "course_admin_digitale", title: "Session 1 - Prise en main", startsAt: "2026-06-08T19:00:00", type: "zoom" },
+  { id: "ses_2", courseId: "course_gp_transfo", title: "Session 2 - Roadmap projet", startsAt: "2026-06-15T19:00:00", type: "zoom" },
+  { id: "ses_3", courseId: "course_ia_productivite", title: "Atelier - IA et productivité", startsAt: "2026-06-22T19:00:00", type: "event" },
+  { id: "ses_4", courseId: "course_bi_data", title: "Deadline - Devoir Power BI", startsAt: "2026-06-24T23:59:00", type: "deadline" }
+];
+
+let trainerEvaluations = [
+  { id: "eval_1", courseId: "course_admin_digitale", title: "Quiz - Administration digitale", kind: "quiz", status: "draft" },
+  { id: "eval_2", courseId: "course_gp_transfo", title: "Devoir - Roadmap numérique", kind: "devoir", status: "published" },
+  { id: "eval_3", courseId: "course_ia_productivite", title: "Exercice - Automatisation", kind: "autre", status: "published" }
+];
+
+let trainerSubmissions = [
+  { id: "sub_1", userId: "user_2", courseId: "course_admin_digitale", title: "Livrable 1 - Tableau de suivi", kind: "devoir", status: "submitted", submittedAt: "2026-06-20T10:15:00" },
+  { id: "sub_2", userId: "user_4", courseId: "course_video", title: "Document de travail", kind: "autre", status: "submitted", submittedAt: "2026-06-21T14:30:00" },
+  { id: "sub_3", userId: "user_6", courseId: "course_bi_data", title: "Dashboard Power BI - V1", kind: "devoir", status: "submitted", submittedAt: "2026-06-22T09:00:00" }
+];
+
+const submissions = trainerSubmissions;
+
+// =============================================================================
+// COUCHE SUPABASE DYNAMIQUE
+// Charge les vraies données depuis Supabase et met à jour les variables ci-dessus,
+// puis re-rend la page courante pour afficher les données réelles.
+// =============================================================================
+
+async function syncSupabaseData() {
+  if (!window.supabaseInstance) return;
+  try {
+    const { data: { session } } = await window.supabaseInstance.auth.getSession();
+    if (!session?.user) return;
+
+    const token = session.access_token;
+    const headers = window.getSupabaseHeaders(token);
+
+    // --- Profils (utilisateurs) ---
+    const { data: profilesData } = await window.supabaseInstance
+      .from('profiles')
+      .select('id, email, first_name, last_name, role');
+    if (profilesData && profilesData.length > 0) {
+      users = profilesData.map(p => ({
+        id: p.id,
+        firstName: p.first_name || "",
+        lastName: p.last_name || "",
+        role: p.role || "participant",
+        email: p.email || "",
+        avatar: ((p.first_name?.[0] || "") + (p.last_name?.[0] || "")).toUpperCase() || "??"
+      }));
+    }
+
+    // --- Formations ---
+    const { data: coursesData } = await window.supabaseInstance
+      .from('courses')
+      .select('id, title, status, trainer_id');
+    if (coursesData && coursesData.length > 0) {
+      courses = coursesData.map(c => ({
+        id: c.id,
+        title: c.title || "Sans titre",
+        status: c.status || "draft",
+        trainerId: c.trainer_id || null
+      }));
+    }
+
+    // --- Inscriptions ---
+    const { data: enrollmentsData } = await window.supabaseInstance
+      .from('enrollments')
+      .select('id, user_id, course_id, payment_status, enrolled_at');
+    if (enrollmentsData && enrollmentsData.length > 0) {
+      enrollments = enrollmentsData.map(e => ({
+        id: e.id,
+        userId: e.user_id,
+        courseId: e.course_id,
+        paymentStatus: e.payment_status || "pending",
+        enrollmentDate: e.enrolled_at ? e.enrolled_at.split("T")[0] : ""
+      }));
+    }
+
+    // --- Sessions / Calendrier ---
+    const { data: sessionsData } = await window.supabaseInstance
+      .from('sessions')
+      .select('id, course_id, title, starts_at, type')
+      .order('starts_at', { ascending: true });
+    if (sessionsData && sessionsData.length > 0) {
+      trainerSessions = sessionsData.map(s => ({
+        id: s.id,
+        courseId: s.course_id,
+        title: s.title,
+        startsAt: s.starts_at,
+        type: s.type || "zoom"
+      }));
+    }
+
+    // --- Évaluations ---
+    const { data: evaluationsData } = await window.supabaseInstance
+      .from('evaluations')
+      .select('id, course_id, title, kind, status');
+    if (evaluationsData && evaluationsData.length > 0) {
+      trainerEvaluations = evaluationsData.map(e => ({
+        id: e.id,
+        courseId: e.course_id,
+        title: e.title,
+        kind: e.kind || "quiz",
+        status: e.status || "draft"
+      }));
+    }
+
+    // --- Soumissions ---
+    const { data: submissionsData } = await window.supabaseInstance
+      .from('submissions')
+      .select('id, user_id, course_id, title, kind, status, submitted_at');
+    if (submissionsData && submissionsData.length > 0) {
+      trainerSubmissions = submissionsData.map(s => ({
+        id: s.id,
+        userId: s.user_id,
+        courseId: s.course_id,
+        title: s.title,
+        kind: s.kind || "devoir",
+        status: s.status || "submitted",
+        submittedAt: s.submitted_at || ""
+      }));
+    }
+
+    // --- Certificats ---
+    const { data: certsData } = await window.supabaseInstance
+      .from('certificates')
+      .select('id, user_id, course_id, issued_at');
+    if (certsData && certsData.length > 0) {
+      certificates = certsData.map(c => ({
+        id: c.id,
+        userId: c.user_id,
+        courseId: c.course_id,
+        issueDate: c.issued_at ? c.issued_at.split("T")[0] : ""
+      }));
+    }
+
+    // --- Demandes d'inscription ---
+    const { data: requestsData } = await window.supabaseInstance
+      .from('enrollment_requests')
+      .select('id, user_id, course_id, status, requested_at');
+    if (requestsData && requestsData.length > 0) {
+      enrollmentRequests = requestsData.map(r => ({
+        id: r.id,
+        userId: r.user_id,
+        courseId: r.course_id,
+        status: r.status || "pending",
+        requestedAt: r.requested_at ? r.requested_at.split("T")[0] : ""
+      }));
+    }
+
+    // Synchronise le chip utilisateur dans la topbar
+    syncUserChip();
+
+    // ✅ Correction : on force l'userId de session avec le vrai UUID Supabase
+    // pour que getParticipantCourses() filtre bien les cours de cet utilisateur
+    sessionStorage.setItem("iccaCurrentUserId", session.user.id);
+
+    // ✅ Synchronise aussi le rôle réel depuis Supabase
+    const currentProfile = profilesData?.find(p => p.id === session.user.id);
+    if (currentProfile?.role && !sessionStorage.getItem("iccaCurrentUserRole")) {
+      sessionStorage.setItem("iccaCurrentUserRole", currentProfile.role);
+    }
+
+    // Re-rendu de la page courante avec les vraies données
+    const role = getWorkspaceRole();
+    renderWorkspacePage(role, currentWorkspaceView || "dashboard");
+
+  } catch (err) {
+    // Supabase indisponible → les données statiques restent affichées
+    console.warn("[syncSupabaseData] Supabase non disponible, données démo affichées :", err.message);
+  }
+}
+
+// =============================================================================
+// APP STATE
+// =============================================================================
+
+const appState = {
+  trackingCourseFilter: "",
+  trackingGroupFilter: "",
+  usersRoleFilter: "all",
+  trainerEvalTab: "quiz",
+  trainerSelectedCourseId: ""
+};
+
+// =============================================================================
+// SESSION & HELPERS
+// =============================================================================
+
+function getSessionUserId() {
+  return sessionStorage.getItem("iccaCurrentUserId") || "admin_1";
+}
+
+function getSessionUser() {
+  return getUser(getSessionUserId()) || users[0];
+}
+
+function getWorkspaceRole() {
+  return sessionStorage.getItem("iccaCurrentUserRole") || getSessionUser()?.role || "admin";
 }
 
 function getUser(id) {
-  return users.find(user => user.id === id);
+  return users.find(u => u.id === id);
 }
 
 function getCourse(id) {
-  return courses.find(course => course.id === id);
+  return courses.find(c => c.id === id);
 }
 
 function getRequestsByStatus(status) {
-  return enrollmentRequests.filter(request => request.status === status);
+  return enrollmentRequests.filter(r => r.status === status);
 }
 
 function getCoursesByStatus(status) {
-  return courses.filter(course => course.status === status);
+  return courses.filter(c => c.status === status);
+}
+
+function getTrainerCourseIds(uid) {
+  // D'abord on cherche dans la map statique (démo)
+  if (trainerCoursesByUser[uid]) return trainerCoursesByUser[uid];
+  // Sinon on filtre les cours dont le trainerId correspond
+  return courses.filter(c => c.trainerId === uid).map(c => c.id);
+}
+
+function getTrainerCourses(uid) {
+  const ids = getTrainerCourseIds(uid);
+  return courses.filter(c => ids.includes(c.id));
+}
+
+function getParticipantCourses(uid) {
+  return enrollments
+    .filter(e => e.userId === uid)
+    .map(e => ({
+      enrollment: e,
+      course: getCourse(e.courseId),
+      progress: getCourseProgress(uid, e.courseId)
+    }));
+}
+
+function getTrainerStats(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const participants = enrollments.filter(e => trainerCourses.some(c => c.id === e.courseId));
+  const subs = trainerSubmissions.filter(s => trainerCourses.some(c => c.id === s.courseId));
+  const pendingCorrections = subs.filter(s => s.status === "submitted" && s.kind === "devoir").length;
+  const upcomingSessions = trainerSessions.filter(s => trainerCourses.some(c => c.id === s.courseId)).length;
+  return { trainerCourses, participants, submissions: subs, pendingCorrections, upcomingSessions };
+}
+
+function getCourseProgress(userId, courseId) {
+  if (certificates.some(cert => cert.userId === userId && cert.courseId === courseId)) return 100;
+  const enrollment = enrollments.find(e => e.userId === userId && e.courseId === courseId);
+  if (!enrollment) return 0;
+  return enrollment.paymentStatus === "paid" ? 72 : 35;
+}
+
+function getCourseParticipants(courseId) {
+  return enrollments
+    .filter(e => e.courseId === courseId)
+    .map(e => ({
+      enrollment: e,
+      user: getUser(e.userId),
+      progress: getCourseProgress(e.userId, courseId)
+    }));
 }
 
 function normalizePaymentStatus(status) {
@@ -200,37 +440,131 @@ function fmtDate(iso) {
   return new Date(iso).toLocaleDateString("fr-FR", { day: "2-digit", month: "long", year: "numeric" });
 }
 
-function fmtMoney(amount, currency = "EUR") {
+function fmtMoney(amount, currency = "CAD") {
   return new Intl.NumberFormat("fr-FR", { style: "currency", currency }).format(amount);
 }
 
 function escapeHTML(value) {
   if (value == null) return "";
-  return String(value).replace(/[&<>"']/g, char => ({
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#39;"
-  }[char]));
+  return String(value).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
-function renderAdminDashboard(uid = "admin_1") {
+// =============================================================================
+// ICONS
+// =============================================================================
+
+const ICONS = {
+  alertCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+  award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+  card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>',
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+  fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"></rect><rect x="13" y="3" width="8" height="8"></rect><rect x="3" y="13" width="8" height="8"></rect><rect x="13" y="13" width="8" height="8"></rect></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 19 10 13 14 17 20 7"></polyline><polyline points="20 7 20 13 14 13"></polyline></svg>',
+  layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 3 7 12 12 21 7 12 2"></polygon><polyline points="3 12 12 17 21 12"></polyline><polyline points="3 17 12 22 21 17"></polyline></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82l-.02.06a2 2 0 1 1-3.3 0l-.02-.06A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33l-.06.02a2 2 0 1 1 0-3.3l.06.02A1.65 1.65 0 0 0 4.6 9c0-.37-.13-.72-.33-1l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6c.32 0 .67-.13 1-.33a1.65 1.65 0 0 0 .33-1.82l.02-.06a2 2 0 1 1 3.3 0l.02.06A1.65 1.65 0 0 0 15 4.6c.37 0 .72.13 1 .33.27.2.48.48.6.82l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9c0 .37.13.72.33 1 .2.27.48.48.82.6l.06.02a2 2 0 1 1 0 3.3l-.06-.02A1.65 1.65 0 0 0 19.4 15Z"></path></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+  zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>'
+};
+
+function icon(name, size = 18) {
+  const svg = ICONS[name] || ICONS.alertCircle;
+  return `<span class="nav-icon" style="display:inline-grid;place-items:center;width:${size}px;height:${size}px">${svg.replace("<svg ", `<svg width="${size}" height="${size}" `)}</span>`;
+}
+
+// =============================================================================
+// BADGES
+// =============================================================================
+
+function renderStatusBadge(status) {
+  const map = {
+    draft: ["badge badge--info", "Brouillon"],
+    published: ["badge badge--success", "Publié"],
+    submitted_for_review: ["badge badge--warn", "Soumis"],
+    submitted: ["badge badge--warn", "Déposé"],
+    approved: ["badge badge--success", "Approuvé"],
+    needs_correction: ["badge badge--danger", "À corriger"],
+    pending: ["badge badge--warn", "En attente"],
+    graded: ["badge badge--success", "Corrigé"],
+    paid: ["badge badge--success", "Payé"]
+  };
+  const [klass, label] = map[status] || ["badge", status || "—"];
+  return `<span class="${klass}">${label}</span>`;
+}
+
+// =============================================================================
+// PARAMÈTRES ADMIN
+// =============================================================================
+
+const ADMIN_SETTINGS_STORAGE_KEY = "icca_admin_settings";
+const DEFAULT_ADMIN_SETTINGS = {
+  platformName: "IC Canada Academy LMS",
+  language: "fr",
+  timezone: "Africa/Tunis",
+  currency: "CAD",
+  certThreshold: 80,
+  certAutoEmit: false,
+  certCodeFormat: "ICCA-{YEAR}-{SEQUENCE}",
+  notifEnrollRequest: true,
+  notifEnrollDecision: true,
+  notifCourseSubmit: true,
+  notifGrade: true,
+  notifCertificate: true,
+  passwordPolicy: "strong",
+  mfa: "admins",
+  sessionDuration: "8h"
+};
+
+function loadAdminSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ADMIN_SETTINGS_STORAGE_KEY) || "null");
+    return { ...DEFAULT_ADMIN_SETTINGS, ...(saved || {}) };
+  } catch {
+    return { ...DEFAULT_ADMIN_SETTINGS };
+  }
+}
+
+const adminSettings = loadAdminSettings();
+let currentAdminView = "dashboard";
+let currentWorkspaceView = "dashboard";
+
+function persistAdminSettings() {
+  try { localStorage.setItem(ADMIN_SETTINGS_STORAGE_KEY, JSON.stringify(adminSettings)); } catch {}
+}
+
+// =============================================================================
+// RENDER — ADMIN
+// =============================================================================
+
+function renderAdminDashboard() {
   const totalUsers = users.length;
-  const totalParticipants = users.filter(user => user.role === "participant").length;
+  const totalParticipants = users.filter(u => u.role === "participant").length;
   const totalCourses = courses.length;
-  const publishedCourses = courses.filter(course => course.status === "published").length;
+  const publishedCourses = courses.filter(c => c.status === "published").length;
   const pendingRequests = getRequestsByStatus("pending").length;
   const pendingCourses = getCoursesByStatus("submitted_for_review").length;
-  const totalRevenue = payments.filter(payment => payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
-  const pendingPayments = payments.filter(payment => payment.status === "pending").length;
+  const totalRevenue = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
+  const pendingPayments = payments.filter(p => p.status === "pending").length;
   const totalCertificates = certificates.length;
 
   return `
     <div class="breadcrumb"><span>Administration</span><span>Tableau de bord</span></div>
     <div class="page-header">
       <div>
-        <h1 class="page-title">Pilotage global</h1>
+        <h1 class="page-title">${icon("shield", 20)} Pilotage global</h1>
         <p class="page-subtitle">Vue d'ensemble de la plateforme IC Canada Academy LMS</p>
       </div>
       <div class="page-actions">
@@ -286,18 +620,16 @@ function renderAdminDashboard(uid = "admin_1") {
           <table class="table">
             <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th>Paiement</th></tr></thead>
             <tbody>
-              ${enrollments.slice(-5).reverse().map(enrollment => {
-                const user = getUser(enrollment.userId);
-                const course = getCourse(enrollment.courseId);
-                return `
-                  <tr>
-                    <td><div class="person-cell"><span class="avatar">${user ? user.avatar : "?"}</span><strong>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</strong></div></td>
-                    <td>${course ? escapeHTML(course.title) : "-"}</td>
-                    <td>${fmtDate(enrollment.enrollmentDate)}</td>
-                    <td>${paymentStatusLabel(effectivePaymentStatus(enrollment))}</td>
-                  </tr>
-                `;
-              }).join("")}
+              ${enrollments.slice(-5).reverse().map(e => {
+    const u = getUser(e.userId);
+    const c = getCourse(e.courseId);
+    return `<tr>
+                <td><div class="person-cell"><span class="avatar">${u ? u.avatar : "?"}</span><strong>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</strong></div></td>
+                <td>${c ? escapeHTML(c.title) : "-"}</td>
+                <td>${fmtDate(e.enrollmentDate)}</td>
+                <td>${paymentStatusLabel(effectivePaymentStatus(e))}</td>
+              </tr>`;
+  }).join("")}
             </tbody>
           </table>
         </div>
@@ -308,18 +640,16 @@ function renderAdminDashboard(uid = "admin_1") {
             <table class="table">
               <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th></th></tr></thead>
               <tbody>
-                ${getRequestsByStatus("pending").slice(0, 5).map(request => {
-                  const user = getUser(request.userId);
-                  const course = getCourse(request.courseId);
-                  return `
-                    <tr>
-                      <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
-                      <td>${course ? escapeHTML(course.title) : "-"}</td>
-                      <td>${fmtDate(request.requestedAt)}</td>
-                      <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${request.id}')">${icon("eye", 13)} Examiner</button></td>
-                    </tr>
-                  `;
-                }).join("")}
+                ${getRequestsByStatus("pending").slice(0, 5).map(r => {
+    const u = getUser(r.userId);
+    const c = getCourse(r.courseId);
+    return `<tr>
+                    <td>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</td>
+                    <td>${c ? escapeHTML(c.title) : "-"}</td>
+                    <td>${fmtDate(r.requestedAt)}</td>
+                    <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${r.id}')">${icon("eye", 13)} Examiner</button></td>
+                  </tr>`;
+  }).join("")}
               </tbody>
             </table>
           </div>
@@ -339,10 +669,9 @@ function renderAdminDashboard(uid = "admin_1") {
                   <div class="activity-time">${actor ? escapeHTML(actor.firstName) : ""} â€¢ ${fmtDate(log.at)}</div>
                 </div>
               </div>
-            `;
-          }).join("")}
+            </div>`;
+  }).join("")}
         </div>
-
         <div class="card" style="margin-top:18px;">
           <h3 class="card-title">${icon("zap", 18)} Actions rapides</h3>
           <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="openCreateUser()">${icon("plus", 14)} Ajouter utilisateur</button>
@@ -1777,6 +2106,10 @@ function showToast(message, type = "info") {
   setTimeout(() => toast.remove(), 2600);
 }
 
+// =============================================================================
+// ACTIONS
+// =============================================================================
+
 function navigate(viewName) {
   const role = getWorkspaceRole();
   renderWorkspacePage(role, viewName);
@@ -1790,25 +2123,29 @@ function navigate(viewName) {
 }
 
 function openRequest(requestId) {
-  const request = enrollmentRequests.find(item => item.id === requestId);
-  const user = request ? getUser(request.userId) : null;
-  const course = request ? getCourse(request.courseId) : null;
+  console.log("requestId =", requestId);
+  console.log("enrollmentRequests =", enrollmentRequests);
+
+  const request = enrollmentRequests.find(r => r.id === requestId);
+  const u = request ? getUser(request.userId) : null;
+  const c = request ? getCourse(request.courseId) : null;
   showModal(
-    `Demande ${escapeHTML(requestId)}`,
-    `
-      <p><strong>Participant :</strong> ${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</p>
-      <p><strong>Formation :</strong> ${course ? escapeHTML(course.title) : "-"}</p>
-      <p><strong>Date :</strong> ${request ? fmtDate(request.requestedAt) : "-"}</p>
-    `,
-    `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button><button class="btn btn-primary" onclick="processRequest('${requestId}')">Approuver l'accès</button>`
+    `Demande d'inscription`,
+    `<p><strong>Participant :</strong> ${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</p>
+     <p><strong>Formation :</strong> ${c ? escapeHTML(c.title) : "-"}</p>
+     <p><strong>Date :</strong> ${request ? fmtDate(request.requestedAt) : "-"}</p>`,
+    `<button class="btn btn-secondary" onclick="processRequest('${requestId}', 'reject')" style="color:var(--danger, #e53e3e);">Rejeter</button>
+     <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
+     <button class="btn btn-primary" onclick="processRequest('${requestId}', 'approve')">${icon("check", 14)} Approuver l'accès</button>`
   );
 }
 
 function openCreateUser() {
   showModal(
     "Nouvel utilisateur",
-    '<p>Interface de création d’un compte utilisateur administrateur, formateur ou participant.</p>',
-    '<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="showToast(\'Utilisateur prêt à créer\'); closeModal();">Créer</button>'
+    `<p>Création d'un compte administrateur, formateur ou participant.</p>`,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+     <button class="btn btn-primary" onclick="showToast('Utilisateur créé', 'success'); closeModal();">Créer</button>`
   );
 }
 
@@ -1858,4 +2195,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener("keydown", event => {
   if (event.key === "Escape") closeModal();
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  injectTopbar();
+  // 1. Rendu immédiat avec données statiques (0ms)
+  renderWorkspacePage(getWorkspaceRole(), "dashboard");
+  // 2. Synchronisation Supabase en arrière-plan (met à jour avec les vraies données)
+  syncSupabaseData();
 });

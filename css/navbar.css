@@ -1,0 +1,292 @@
+/* moodle/css/navbar.css */
+
+/* Variables CSS */
+:root {
+    --topbar-h: 68px;
+    --surface: #FFFFFF;
+    --bg: #F5F7FA;
+    --border: #E5E9EF;
+    --border-strong: #C3CAD5;
+    --text: #0E1623;
+    --text-soft: #2B3648;
+    --text-muted: #5A6477;
+    --primary: #003B7A;
+    --blue-100: #E6EEF8;
+    --accent: #C8202F;
+    --t: 200ms;
+    --ease: cubic-bezier(.4, 0, .2, 1);
+}
+
+/* Styles de la Topbar */
+.topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: var(--topbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    gap: 24px;
+    z-index: 100;
+    backdrop-filter: blur(8px);
+    margin-bottom: 25px;
+}
+
+.topbar-left {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 0 0 auto;
+    min-width: 220px;
+}
+
+.topbar-center {
+   flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start; /* Aligné à gauche du bloc central */
+    gap: 24px;
+    padding-left: 20px; /* Petit décalage pour ne pas coller le logo */
+}
+
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+/* Menu Toggle */
+.menu-toggle {
+    width: 38px;
+    height: 38px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--text-soft);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: background var(--t) var(--ease);
+}
+
+.menu-toggle:hover {
+    background: var(--bg);
+}
+
+/* Brand */
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.brand-mark {
+    width: 36px;
+    margin-top: 25px;
+    height: 36px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    background: transparent !important;
+    /* Optionnel : si votre logo a un fond transparent, gardez la couleur de fond. 
+     Si votre logo a déjà un fond, commentez la ligne background ci-dessous : */
+    overflow: hidden;
+    /* S'assure que l'image ne dépasse pas les coins arrondis */
+}
+
+.brand-mark img {
+    width: 85%;
+    /* Ajustez ce pourcentage pour que le logo soit bien centré/aéré */
+    height: 85%;
+    object-fit: contain;
+}
+
+.brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.2;
+}
+
+.brand-text-1 {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text);
+}
+
+.brand-text-2 {
+    font-size: 12px;
+    color: var(--primary);
+    font-weight: 500;
+}
+
+.red {
+    color: var(--accent);
+}
+
+/* Recherche */
+.topbar-search {
+    position: relative;
+    width: 300px;
+
+}
+
+.search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    pointer-events: none; /* Pour que l'icône ne bloque pas le clic dans l'input */
+}
+.topbar-search input {
+    width: 100%;
+    padding: 9px 14px 9px 38px;
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    background: var(--bg);
+    font-size: 13.5px;
+    transition: all var(--t) var(--ease);
+    padding-left: 38px;
+}
+
+.topbar-search input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--surface);
+    box-shadow: 0 0 0 4px var(--blue-100);
+}
+
+/* Icon Buttons */
+.icon-btn {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--text-soft);
+    cursor: pointer;
+    background: transparent;
+    border: none;
+    transition: all var(--t) var(--ease);
+}
+
+.icon-btn:hover {
+    background: var(--bg);
+    color: var(--text);
+}
+
+.icon-btn .dot {
+    position: absolute;
+    top: 8px;
+    right: 9px;
+    width: 8px;
+    height: 8px;
+    background: var(--accent);
+    border: 2px solid var(--surface);
+    border-radius: 999px;
+}
+
+/* User Chip */
+.user-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 12px 4px 4px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 999px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #0A4D9C, #002A5C);
+    color: #fff;
+    font-size: 12px;
+}
+
+/* Style du Switcher */
+.switcher {
+    display: flex;
+    background: var(--bg);
+    padding: 4px;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    margin-left: 80px;
+    margin-right: 100px;
+}
+
+.switcher button {
+    padding: 8px 24px;
+    border-radius: 999px;
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all var(--t) var(--ease);
+}
+
+/* L'état actif (Bleu du site) */
+.switcher button.active {
+    background: var(--primary);
+    /* Utilisation de votre variable bleue */
+    color: #FFFFFF;
+    /* Texte blanc pour le contraste */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* Style de base de la sidebar (ajustez selon votre code actuel) */
+
+/* Classe pour cacher la sidebar */
+/* 1. État de base de la sidebar : elle doit écouter les transitions */
+.sidebar {
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+/* 2. Quand le parent a la classe collapsed, on applique l'animation et le Grid */
+.app-shell.sidebar-collapsed {
+    /* Au lieu de 0, on utilise 0px pour le grid (ou on laisse le transform gérer) */
+    grid-template-columns: 0px minmax(0, 1fr);
+}
+
+.app-shell.sidebar-collapsed .sidebar {
+    transform: translateX(-100%); /* Sort de l'écran fluidement */
+    opacity: 0;                   /* Optionnel: s'efface en douceur pour éviter les bugs visuels */
+    pointer-events: none;         /* Empêche de cliquer sur les liens masqués */
+}
+
+/* --- Ton code pour le main-shell (qui est super, on n'y touche pas) --- */
+.main-shell {
+    transition: all .3s ease;
+    padding: 32px 24px; /* Un peu plus d'espace vertical au passage */
+}
+
+.main-shell.expanded {
+    margin-left: 0 !important;
+    width: 100% !important;
+}
+
+/* C'est ici qu'on donne de l'espace pour éviter l'effet "squeezed" */
+.main-shell > * {
+    max-width: 1400px; /* Augmenté de 1200px à 1400px pour laisser respirer les cartes */
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    padding: 0 16px;   /* Sécurité pour que ça ne colle pas aux bords d'écran */
+}
