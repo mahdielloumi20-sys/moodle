@@ -1,82 +1,6 @@
-﻿// =============================================================================
-// TOPBAR
-// =============================================================================
-
-function injectTopbar() {
-  if (document.querySelector('.topbar')) return;
-  const header = document.createElement('header');
-  header.className = 'topbar';
-  header.innerHTML = `
-    <div class="topbar-left">
-            <button class="menu-toggle" id="toggleSidebar">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/>
-                </svg>
-            </button>
-            <a href="#" class="brand">
-                <div class="brand-mark"><img src="../assets/ic_logo.png"></div>
-                <div class="brand-text" style="margin-top:25px;">
-                    <span class="brand-text-1">IC Canada Academy</span>
-                    <span class="brand-text-2">Learning Platform</span>
-                </div>
-            </a>
-        </div>
-    <div class="topbar-center">
-      <div class="switcher">
-        <button class="active" data-role="participant">Participant</button>
-        <button data-role="trainer">Formateur</button>
-        <button data-role="admin">Admin</button>
-      </div>
-      <div class="topbar-search">
-        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" placeholder="Rechercher une formation...">
-      </div>
-    </div>
-    <div class="topbar-right">
-      <button class="icon-btn"><span class="dot"></span><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></button>
-      <div class="user-chip">
-        <div class="avatar">--</div>
-        <span class="user-name">Chargement...</span>
-      </div>
-    </div>
-  `;
-  document.body.prepend(header);
-  // À l'intérieur de la fonction injectTopbar()
-document.getElementById('toggleSidebar').addEventListener('click', () => {
-    const sidebar = document.querySelector('.sidebar');
-    const mainShell = document.querySelector('.main-shell');
-    const appShell = document.querySelector('.app-shell');
-
-    if (sidebar) sidebar.classList.toggle('hidden');
-    if (mainShell) mainShell.classList.toggle('expanded');
-    if (appShell) appShell.classList.toggle('sidebar-collapsed');
-});
-
-  initSwitcherLogic();
-}
-
-function initSwitcherLogic() {
-  const buttons = document.querySelectorAll('.switcher button');
-  buttons.forEach(btn => {
-    btn.addEventListener('click', () => {
-      buttons.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const role = btn.getAttribute('data-role');
-      renderWorkspacePage(role, 'dashboard');
-      setupWorkspaceShell(role);
-    });
-  });
-}
-
-// =============================================================================
-// DONNÉES STATIQUES DE DÉMO (fallback quand Supabase ne répond pas encore)
-// Ces données s'affichent immédiatement, puis sont remplacées par les vraies
-// données Supabase dès qu'elles arrivent via syncSupabaseData().
-// =============================================================================
-
-let users = [
-  { id: "admin_1", firstName: "Mohamed", lastName: "Admin", role: "admin", avatar: "MA" },
-  { id: "trainer_1", firstName: "Ahmed", lastName: "Formateur", role: "trainer", avatar: "AF" },
+﻿const users = [
+  { id: "admin_1", firstName: "Karim", lastName: "Karray", role: "admin", avatar: "KK" },
+  { id: "trainer_1", firstName: "LeÃ¯la", lastName: "BensaÃ¯d", role: "trainer", avatar: "LB" },
   { id: "trainer_2", firstName: "Marc", lastName: "Tremblay", role: "trainer", avatar: "MT" },
   { id: "user_1", firstName: "Ahmed", lastName: "Belkadi", role: "participant", avatar: "AB" },
   { id: "user_2", firstName: "Ali", lastName: "Utilisateur", role: "participant", avatar: "AU" },
@@ -89,13 +13,13 @@ let users = [
 let courses = [
   { id: "course_admin_digitale", title: "Consultant - Administration digitale", status: "published" },
   { id: "course_bi_data", title: "Consultant - BI & Data Analytics", status: "published" },
-  { id: "course_gp_transfo", title: "Consultant - Gestion de projet et Transformation numérique", status: "published" },
-  { id: "course_employabilite", title: "Consultant - Employabilité & carrière digitale", status: "published" },
-  { id: "course_ia_productivite", title: "Consultant - IA & productivité digitale", status: "published" },
+  { id: "course_gp_transfo", title: "Consultant - Gestion de projet et Transformation numÃ©rique", status: "published" },
+  { id: "course_employabilite", title: "Consultant - EmployabilitÃ© & carriÃ¨re digitale", status: "published" },
+  { id: "course_ia_productivite", title: "Consultant - IA & productivitÃ© digitale", status: "published" },
   { id: "course_nocode", title: "Consultant - Digitalisation & no-code", status: "published" },
   { id: "course_freelance", title: "Consultant - Freelance digital", status: "published" },
-  { id: "course_video", title: "Consultant - Création vidéo & contenu digital", status: "published" },
-  { id: "course_cyber", title: "Consultant - Cybersécurité", status: "published" },
+  { id: "course_video", title: "Consultant - CrÃ©ation vidÃ©o & contenu digital", status: "published" },
+  { id: "course_cyber", title: "Consultant - CybersÃ©curitÃ©", status: "published" },
   { id: "course_marketing", title: "Consultant - Marketing digital", status: "published" },
   { id: "course_ecommerce", title: "Consultant - E-commerce", status: "published" }
 ];
@@ -131,11 +55,11 @@ let certificates = [
 
 let activityLog = [
   { id: "log_1", at: "2026-06-01T09:00:00", actorId: "admin_1", details: "Publication des 11 formations du Programme Jeunes Talents dans le LMS." },
-  { id: "log_2", at: "2026-06-15T14:30:00", actorId: "admin_1", details: "Participant inscrit au parcours complet Jeunes Talents." },
-  { id: "log_3", at: "2026-08-12T10:00:00", actorId: "trainer_1", details: "Certificat Administration digitale émis." }
+  { id: "log_2", at: "2026-06-15T14:30:00", actorId: "admin_1", details: "Sarah inscrite au parcours complet Jeunes Talents." },
+  { id: "log_3", at: "2026-08-12T10:00:00", actorId: "trainer_1", details: "Certificat Administration digitale Ã©mis pour Sarah." }
 ];
 
-let groups = [
+const groups = [
   { id: "grp_admin_1", name: "Cohorte Administration A", courseId: "course_admin_digitale", members: ["user_2", "user_4"] },
   { id: "grp_bi_1", name: "Cohorte Data A", courseId: "course_bi_data", members: ["user_2", "user_6"] },
   { id: "grp_transfo_1", name: "Cohorte Projet A", courseId: "course_gp_transfo", members: ["user_6"] }
@@ -149,9 +73,84 @@ const accessRules = [
   { groupId: "grp_transfo_1", module: "Module 1", open: true }
 ];
 
-const trainerCoursesByUser = {
-  trainer_1: ["course_admin_digitale", "course_gp_transfo", "course_employabilite", "course_ia_productivite"],
-  trainer_2: ["course_bi_data", "course_nocode", "course_marketing", "course_video", "course_cyber", "course_freelance"]
+const appState = {
+  trackingCourseFilter: "",
+  trackingGroupFilter: "",
+  usersRoleFilter: "all",
+  trainerEvalTab: "quiz",
+  trainerSelectedCourseId: ""
+};
+
+function getSessionUserId() {
+  return sessionStorage.getItem("iccaCurrentUserId") || "admin_1";
+}
+
+function getSessionUser() {
+  return getUser(getSessionUserId()) || users[0];
+}
+
+function getWorkspaceRole() {
+  return sessionStorage.getItem("iccaCurrentUserRole") || getSessionUser()?.role || "admin";
+}
+
+function renderStatusBadge(status) {
+  const map = {
+    draft: ["badge badge--info", "Brouillon"],
+    published: ["badge badge--success", "Publié"],
+    submitted_for_review: ["badge badge--warn", "Soumis"],
+    submitted: ["badge badge--warn", "Déposé"],
+    approved: ["badge badge--success", "Approuvé"],
+    needs_correction: ["badge badge--danger", "À corriger"],
+    pending: ["badge badge--warn", "En attente"],
+    graded: ["badge badge--success", "Corrigé"],
+    paid: ["badge badge--success", "Payé"]
+  };
+  const [klass, label] = map[status] || ["badge", status || "—"];
+  return `<span class="${klass}">${label}</span>`;
+}
+
+function getCourseProgress(userId, courseId) {
+  if (certificates.some(cert => cert.userId === userId && cert.courseId === courseId)) return 100;
+  const enrollment = enrollments.find(item => item.userId === userId && item.courseId === courseId);
+  if (!enrollment) return 0;
+  return enrollment.paymentStatus === "paid" ? 72 : 35;
+}
+
+function getCourseParticipants(courseId) {
+  return enrollments
+    .filter(enrollment => enrollment.courseId === courseId)
+    .map(enrollment => ({
+      enrollment,
+      user: getUser(enrollment.userId),
+      progress: getCourseProgress(enrollment.userId, courseId)
+    }));
+}
+
+const ICONS = {
+  alertCircle: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>',
+  award: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="7"></circle><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"></polyline></svg>',
+  book: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>',
+  card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="1" y="4" width="22" height="16" rx="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>',
+  calendar: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>',
+  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>',
+  download: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>',
+  edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>',
+  eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
+  fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
+  grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"></rect><rect x="13" y="3" width="8" height="8"></rect><rect x="3" y="13" width="8" height="8"></rect><rect x="13" y="13" width="8" height="8"></rect></svg>',
+  chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 19 10 13 14 17 20 7"></polyline><polyline points="20 7 20 13 14 13"></polyline></svg>',
+  layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 3 7 12 12 21 7 12 2"></polygon><polyline points="3 12 12 17 21 12"></polyline><polyline points="3 17 12 22 21 17"></polyline></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>',
+  search: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>',
+  settings: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06A1.65 1.65 0 0 0 15 19.4a1.65 1.65 0 0 0-1 .6 1.65 1.65 0 0 0-.33 1.82l-.02.06a2 2 0 1 1-3.3 0l-.02-.06A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1-.6 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-.6-1 1.65 1.65 0 0 0-1.82-.33l-.06.02a2 2 0 1 1 0-3.3l.06.02A1.65 1.65 0 0 0 4.6 9c0-.37-.13-.72-.33-1l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6c.32 0 .67-.13 1-.33a1.65 1.65 0 0 0 .33-1.82l.02-.06a2 2 0 1 1 3.3 0l.02.06A1.65 1.65 0 0 0 15 4.6c.37 0 .72.13 1 .33.27.2.48.48.6.82l.06.06a2 2 0 1 1 2.83 2.83l-.06-.06A1.65 1.65 0 0 0 19.4 9c0 .37.13.72.33 1 .2.27.48.48.82.6l.06.02a2 2 0 1 1 0 3.3l-.06-.02A1.65 1.65 0 0 0 19.4 15Z"></path></svg>',
+  shield: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>',
+  upload: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"></circle><path d="M4 21v-2a8 8 0 0 1 16 0v2"></path></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>',
+  zap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>'
 };
 
 let trainerSessions = [
@@ -428,11 +427,11 @@ function effectivePaymentStatus(enrollment) {
 }
 
 function paymentStatusLabel(status) {
-  const n = normalizePaymentStatus(status);
-  if (n === "paid") return '<span class="badge badge--success">Payé</span>';
-  if (n === "free") return '<span class="badge badge--info">Offert</span>';
-  if (n === "failed") return '<span class="badge badge--danger">Échoué</span>';
-  if (n === "cancelled") return '<span class="badge badge--danger">Annulé</span>';
+  const normalized = normalizePaymentStatus(status);
+  if (normalized === "paid") return '<span class="badge badge--success">PayÃ©</span>';
+  if (normalized === "free") return '<span class="badge badge--info">Offert</span>';
+  if (normalized === "failed") return '<span class="badge badge--danger">Ã‰chouÃ©</span>';
+  if (normalized === "cancelled") return '<span class="badge badge--danger">AnnulÃ©</span>';
   return '<span class="badge badge--warn">En attente</span>';
 }
 
@@ -582,8 +581,8 @@ function renderAdminDashboard() {
             <strong>Actions en attente</strong>
             <div class="alert-detail">
               ${pendingRequests > 0 ? `<strong>${pendingRequests}</strong> demande${pendingRequests > 1 ? "s" : ""} d'inscription` : ""}
-              ${pendingRequests > 0 && pendingCourses > 0 ? " • " : ""}
-              ${pendingCourses > 0 ? `<strong>${pendingCourses}</strong> cours à valider` : ""}
+              ${pendingRequests > 0 && pendingCourses > 0 ? " â€¢ " : ""}
+              ${pendingCourses > 0 ? `<strong>${pendingCourses}</strong> cours Ã  valider` : ""}
             </div>
           </div>
           ${pendingRequests > 0 ? `<button class="btn btn-sm btn-secondary" onclick="navigate('requests')">Traiter les demandes</button>` : ""}
@@ -601,22 +600,22 @@ function renderAdminDashboard() {
       <div class="kpi kpi--accent">
         <div class="kpi-head"><span class="kpi-label">Formations</span><div class="kpi-icon">${icon("book", 18)}</div></div>
         <div class="kpi-value">${totalCourses}</div>
-        <div class="kpi-delta">${publishedCourses} publiées</div>
+        <div class="kpi-delta">${publishedCourses} publiÃ©es</div>
       </div>
       <div class="kpi kpi--success">
-        <div class="kpi-head"><span class="kpi-label">Revenus encaissés</span><div class="kpi-icon">${icon("card", 18)}</div></div>
+        <div class="kpi-head"><span class="kpi-label">Revenus encaissÃ©s</span><div class="kpi-icon">${icon("card", 18)}</div></div>
         <div class="kpi-value" style="font-size:24px;">${fmtMoney(totalRevenue)}</div>
         <div class="kpi-delta positive">${pendingPayments} en attente</div>
       </div>
       <div class="kpi kpi--gold">
-        <div class="kpi-head"><span class="kpi-label">Certificats émis</span><div class="kpi-icon">${icon("award", 18)}</div></div>
+        <div class="kpi-head"><span class="kpi-label">Certificats Ã©mis</span><div class="kpi-icon">${icon("award", 18)}</div></div>
         <div class="kpi-value">${totalCertificates}</div>
       </div>
     </div>
 
     <div class="grid-main">
       <div>
-        <div class="section-title"><h2>Inscriptions récentes</h2><a href="#" onclick="event.preventDefault(); navigate('enrollments')">Voir tout →</a></div>
+        <div class="section-title"><h2>Inscriptions rÃ©centes</h2><a href="#" onclick="event.preventDefault(); navigate('enrollments')">Voir tout â†’</a></div>
         <div class="table-wrap">
           <table class="table">
             <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th>Paiement</th></tr></thead>
@@ -659,14 +658,16 @@ function renderAdminDashboard() {
 
       <div>
         <div class="card">
-          <h3 class="card-title">${icon("clock", 18)} Activité récente</h3>
+          <h3 class="card-title">${icon("clock", 18)} ActivitÃ© rÃ©cente</h3>
           ${activityLog.slice(0, 6).map(log => {
-    const actor = getUser(log.actorId);
-    return `<div class="activity-item">
-              <span class="activity-dot"></span>
-              <div class="activity-content">
-                <div style="font-size:13px;">${escapeHTML(log.details)}</div>
-                <div class="activity-time">${actor ? escapeHTML(actor.firstName) : ""} • ${fmtDate(log.at)}</div>
+            const actor = getUser(log.actorId);
+            return `
+              <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                  <div style="font-size:13px;">${escapeHTML(log.details)}</div>
+                  <div class="activity-time">${actor ? escapeHTML(actor.firstName) : ""} â€¢ ${fmtDate(log.at)}</div>
+                </div>
               </div>
             </div>`;
   }).join("")}
@@ -674,8 +675,8 @@ function renderAdminDashboard() {
         <div class="card" style="margin-top:18px;">
           <h3 class="card-title">${icon("zap", 18)} Actions rapides</h3>
           <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="openCreateUser()">${icon("plus", 14)} Ajouter utilisateur</button>
-          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('groups')">${icon("users", 14)} Gérer les groupes</button>
-          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('certificates')">${icon("award", 14)} Émettre certificats</button>
+          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('groups')">${icon("users", 14)} GÃ©rer les groupes</button>
+          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('certificates')">${icon("award", 14)} Ã‰mettre certificats</button>
           <button class="btn btn-secondary" style="width:100%;" onclick="navigate('import_export')">${icon("download", 14)} Export complet</button>
         </div>
       </div>
@@ -683,889 +684,224 @@ function renderAdminDashboard() {
   `;
 }
 
-function renderAdminTracking() {
-  const courseFilter = appState.trackingCourseFilter || "";
-  const groupFilter = appState.trackingGroupFilter || "";
-  const filteredEnrollments = enrollments.filter(e => {
-    const matchesCourse = !courseFilter || e.courseId === courseFilter;
-    const matchesGroup = !groupFilter || groups.some(g => g.id === groupFilter && g.members.includes(e.userId) && g.courseId === e.courseId);
-    return matchesCourse && matchesGroup;
-  });
-  const avgProgress = filteredEnrollments.length
-    ? Math.round(filteredEnrollments.reduce((s, e) => s + getCourseProgress(e.userId, e.courseId), 0) / filteredEnrollments.length)
-    : 0;
+const ADMIN_SETTINGS_STORAGE_KEY = "icca_admin_settings";
+const DEFAULT_ADMIN_SETTINGS = {
+  platformName: "IC Canada Academy LMS",
+  language: "fr",
+  timezone: "Europe/Paris",
+  currency: "EUR",
+  certThreshold: 80,
+  certAutoEmit: false,
+  certCodeFormat: "ICCA-{YEAR}-{SEQUENCE}",
+  notifEnrollRequest: true,
+  notifEnrollDecision: true,
+  notifCourseSubmit: true,
+  notifGrade: true,
+  notifCertificate: true,
+  passwordPolicy: "strong",
+  mfa: "admins",
+  sessionDuration: "8h"
+};
 
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Suivi global</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Suivi global LMS</h1><p class="page-subtitle">Performance des formations, progression des cohortes et occupation des groupes.</p></div>
-      <div class="page-actions">
-        <select class="form-control" style="min-width:240px;" onchange="appState.trackingCourseFilter = this.value; renderAdminPage('tracking');">
-          <option value="">Toutes les formations</option>
-          ${courses.map(c => `<option value="${c.id}" ${courseFilter === c.id ? "selected" : ""}>${escapeHTML(c.title)}</option>`).join("")}
-        </select>
-        <select class="form-control" style="min-width:220px;" onchange="appState.trackingGroupFilter = this.value; renderAdminPage('tracking');">
-          <option value="">Tous les groupes</option>
-          ${groups.map(g => `<option value="${g.id}" ${groupFilter === g.id ? "selected" : ""}>${escapeHTML(g.name)}</option>`).join("")}
-        </select>
-      </div>
-    </div>
-    <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Inscriptions actives</span><div class="kpi-icon">${icon("users", 18)}</div></div><div class="kpi-value">${filteredEnrollments.length}</div></div>
-      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Progression moyenne</span><div class="kpi-icon">${icon("clock", 18)}</div></div><div class="kpi-value">${avgProgress}%</div></div>
-      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Certificats émis</span><div class="kpi-icon">${icon("award", 18)}</div></div><div class="kpi-value">${certificates.length}</div></div>
-      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Groupes visibles</span><div class="kpi-icon">${icon("layers", 18)}</div></div><div class="kpi-value">${groups.length}</div></div>
-    </div>
-    <div class="grid-main">
-      <div>
-        ${courses.filter(c => c.status === "published").map(c => {
-    const participants = getCourseParticipants(c.id);
-    if (courseFilter && c.id !== courseFilter) return "";
-    const avg = participants.length ? Math.round(participants.reduce((s, i) => s + i.progress, 0) / participants.length) : 0;
-    return `<div class="card" style="margin-bottom:16px;">
-            <div class="card-title">${icon("book", 18)} ${escapeHTML(c.title)}</div>
-            <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:12px;">
-              <div><strong>${participants.length}</strong><div style="color:var(--text-muted); font-size:12px;">Inscrits</div></div>
-              <div><strong>${avg}%</strong><div style="color:var(--text-muted); font-size:12px;">Progression moyenne</div></div>
-              <div><strong>${certificates.filter(cert => cert.courseId === c.id).length}</strong><div style="color:var(--text-muted); font-size:12px;">Certificats</div></div>
-            </div>
-            <div class="table-wrap">
-              <table class="table">
-                <thead><tr><th>Participant</th><th>Progression</th><th>Paiement</th></tr></thead>
-                <tbody>
-                  ${participants.slice(0, 4).map(item => `<tr>
-                    <td><div class="person-cell"><span class="avatar">${item.user ? item.user.avatar : "?"}</span><strong>${item.user ? escapeHTML(`${item.user.firstName} ${item.user.lastName}`) : "-"}</strong></div></td>
-                    <td>${item.progress}%</td>
-                    <td>${paymentStatusLabel(effectivePaymentStatus(item.enrollment))}</td>
-                  </tr>`).join("")}
-                </tbody>
-              </table>
-            </div>
-          </div>`;
-  }).join("") || '<div class="empty-state"><h3>Aucune donnée pour ce filtre</h3></div>'}
-      </div>
-      <div>
-        <div class="card">
-          <h3 class="card-title">${icon("layers", 18)} Cohortes</h3>
-          ${groups.map(g => {
-    const c = getCourse(g.courseId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${escapeHTML(g.name)}</strong></div><div class="activity-time">${c ? escapeHTML(c.title) : "-"} • ${g.members.length} membres</div></div></div>`;
-  }).join("")}
-        </div>
-      </div>
-    </div>
-  `;
+function loadAdminSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(ADMIN_SETTINGS_STORAGE_KEY) || "null");
+    return { ...DEFAULT_ADMIN_SETTINGS, ...(saved || {}) };
+  } catch (error) {
+    return { ...DEFAULT_ADMIN_SETTINGS };
+  }
 }
 
-function renderAdminUsers() {
-  const roleFilter = appState.usersRoleFilter || "all";
-  const filteredUsers = users.filter(u => roleFilter === "all" || u.role === roleFilter);
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Utilisateurs</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Utilisateurs</h1><p class="page-subtitle">${users.length} comptes actifs sur la plateforme.</p></div>
-      <div class="page-actions">
-        <select class="form-control" style="min-width:220px;" onchange="appState.usersRoleFilter = this.value; renderAdminPage('users');">
-          <option value="all" ${roleFilter === "all" ? "selected" : ""}>Tous les rôles</option>
-          <option value="admin" ${roleFilter === "admin" ? "selected" : ""}>Administrateurs</option>
-          <option value="trainer" ${roleFilter === "trainer" ? "selected" : ""}>Formateurs</option>
-          <option value="participant" ${roleFilter === "participant" ? "selected" : ""}>Participants</option>
-        </select>
-        <button class="btn btn-secondary" onclick="showToast('Import CSV utilisateurs', 'info')">${icon("upload", 14)} Import CSV</button>
-        <button class="btn btn-primary" onclick="openCreateUser()">${icon("plus", 14)} Nouvel utilisateur</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Formation(s)</th><th>Email</th><th></th></tr></thead>
-        <tbody>
-          ${filteredUsers.map(u => {
-    const enrollCount = enrollments.filter(e => e.userId === u.id).length;
-    const roleClass = u.role === "admin" ? "badge badge--danger" : u.role === "trainer" ? "badge badge--info" : "badge badge--success";
-    const roleLabel = u.role === "admin" ? "Admin" : u.role === "trainer" ? "Formateur" : "Participant";
-    return `<tr>
-              <td><div class="person-cell"><span class="avatar">${u.avatar}</span><strong>${escapeHTML(`${u.firstName} ${u.lastName}`)}</strong></div></td>
-              <td><span class="${roleClass}">${roleLabel}</span></td>
-              <td>${enrollCount}</td>
-              <td style="font-size:13px; color:var(--text-muted);">${escapeHTML(u.email || "")}</td>
-              <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation de ${escapeHTML(u.firstName)}', 'info')">${icon("eye", 13)} Voir</button></td>
-            </tr>`;
-  }).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
+const adminSettings = loadAdminSettings();
+let currentAdminView = "dashboard";
+let currentWorkspaceView = "dashboard";
 
-function renderAdminCatalog() {
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Catalogue</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Catalogue des formations</h1><p class="page-subtitle">${courses.length} formations dans le LMS.</p></div>
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Formation</th><th>Inscriptions</th><th>Statut</th><th></th></tr></thead>
-        <tbody>
-          ${courses.map(c => `<tr>
-            <td><strong>${escapeHTML(c.title)}</strong></td>
-            <td>${enrollments.filter(e => e.courseId === c.id).length}</td>
-            <td>${renderStatusBadge(c.status)}</td>
-            <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Aperçu de ${escapeHTML(c.title)}', 'info')">${icon("eye", 13)} Voir</button></td>
-          </tr>`).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAdminCourseReview() {
-  const pending = getCoursesByStatus("submitted_for_review");
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Validation des cours</span></div>
-    <div class="page-header"><div><h1 class="page-title">Validation des cours</h1></div></div>
-    ${pending.length
-    ? `<div class="grid-2">${pending.map(c => `<div class="card"><h3 class="card-title">${escapeHTML(c.title)}</h3><p class="card-subtitle">Cours soumis pour examen.</p></div>`).join("")}</div>`
-    : '<div class="empty-state"><h3>Aucun cours à examiner</h3><p>Tous les cours publiés sont déjà validés.</p></div>'}
-  `;
-}
-
-function renderAdminRequests() {
-  const pending = getRequestsByStatus("pending");
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Demandes</span></div>
-    <div class="page-header"><div><h1 class="page-title">Demandes d'inscription</h1><p class="page-subtitle">${pending.length} demande(s) en attente.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th></th></tr></thead>
-        <tbody>
-          ${pending.map(r => {
-    const u = getUser(r.userId);
-    const c = getCourse(r.courseId);
-    return `<tr>
-              <td>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${fmtDate(r.requestedAt)}</td>
-              <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${r.id}')">${icon("eye", 13)} Examiner</button></td>
-            </tr>`;
-  }).join("") || '<tr><td colspan="4"><div class="empty-state"><h3>Aucune demande</h3><p>Tout est à jour.</p></div></td></tr>'}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAdminEnrollments() {
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Inscriptions</span></div>
-    <div class="page-header"><div><h1 class="page-title">Inscriptions</h1><p class="page-subtitle">${enrollments.length} inscriptions actives.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th>Paiement</th></tr></thead>
-        <tbody>
-          ${enrollments.map(e => {
-    const u = getUser(e.userId);
-    const c = getCourse(e.courseId);
-    return `<tr>
-              <td><div class="person-cell"><span class="avatar">${u ? u.avatar : "?"}</span><strong>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</strong></div></td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${fmtDate(e.enrollmentDate)}</td>
-              <td>${paymentStatusLabel(effectivePaymentStatus(e))}</td>
-            </tr>`;
-  }).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAdminGroups() {
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Groupes & accès</span></div>
-    <div class="page-header"><div><h1 class="page-title">Groupes & accès</h1><p class="page-subtitle">${groups.length} cohortes configurées.</p></div></div>
-    <div class="grid-2">
-      ${groups.map(g => {
-    const c = getCourse(g.courseId);
-    const members = g.members.map(id => getUser(id)).filter(Boolean);
-    return `<div class="card">
-          <div class="card-title">${icon("layers", 18)} ${escapeHTML(g.name)}</div>
-          <p class="card-subtitle">${c ? escapeHTML(c.title) : "-"}</p>
-          <div style="margin-top:10px;">
-            ${members.map(m => `<div class="person-cell" style="margin-bottom:6px;"><span class="avatar">${m.avatar}</span><span>${escapeHTML(`${m.firstName} ${m.lastName}`)}</span></div>`).join("")}
-          </div>
-        </div>`;
-  }).join("")}
-    </div>
-  `;
-}
-
-function renderAdminPayments() {
-  const total = payments.filter(p => p.status === "paid").reduce((s, p) => s + p.amount, 0);
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Paiements</span></div>
-    <div class="page-header"><div><h1 class="page-title">Paiements</h1><p class="page-subtitle">Total encaissé : <strong>${fmtMoney(total)}</strong></p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Référence</th><th>Montant</th><th>Statut</th></tr></thead>
-        <tbody>
-          ${payments.map(p => `<tr><td>${escapeHTML(p.id)}</td><td>${fmtMoney(p.amount)}</td><td>${paymentStatusLabel(p.status)}</td></tr>`).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAdminCertificates() {
-  const eligible = enrollments.filter(e => getCourseProgress(e.userId, e.courseId) >= 80);
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Certificats</span></div>
-    <div class="page-header"><div><h1 class="page-title">Certificats</h1><p class="page-subtitle">${certificates.length} émis · ${eligible.length} éligibles</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Formation</th><th>Éligibilité</th></tr></thead>
-        <tbody>
-          ${eligible.map(e => {
-    const u = getUser(e.userId);
-    const c = getCourse(e.courseId);
-    return `<tr>
-              <td>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${renderStatusBadge("approved")}</td>
-            </tr>`;
-  }).join("") || '<tr><td colspan="3"><div class="empty-state"><h3>Aucun participant éligible</h3></div></td></tr>'}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderAdminImportExport() {
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Import / Export</span></div>
-    <div class="page-header"><div><h1 class="page-title">Import / Export</h1><p class="page-subtitle">Sauvegarde et synchronisation des données.</p></div></div>
-    <div class="settings-grid">
-      <div class="settings-card">
-        <div class="card-head">Export</div>
-        <p class="settings-note">Exporte les utilisateurs, formations, inscriptions et paiements.</p>
-        <button class="btn btn-primary" onclick="showToast('Export généré', 'success')">${icon("download", 14)} Export complet</button>
-      </div>
-      <div class="settings-card">
-        <div class="card-head">Import</div>
-        <p class="settings-note">Charge un fichier pour restaurer les données de la plateforme.</p>
-        <button class="btn btn-secondary" onclick="showToast('Import en cours...', 'info')">${icon("upload", 14)} Importer</button>
-      </div>
-    </div>
-  `;
-}
-
-function renderAdminActivity() {
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Journal d'activité</span></div>
-    <div class="page-header"><div><h1 class="page-title">Journal d'activité</h1><p class="page-subtitle">Historique récent des actions sur la plateforme.</p></div></div>
-    <div class="card">
-      ${activityLog.map(entry => {
-    const actor = getUser(entry.actorId);
-    return `<div class="activity-item">
-          <span class="activity-dot"></span>
-          <div class="activity-content">
-            <div><strong>${escapeHTML(entry.details)}</strong></div>
-            <div class="activity-time">${actor ? escapeHTML(`${actor.firstName} ${actor.lastName}`) : "-"} • ${fmtDate(entry.at)}</div>
-          </div>
-        </div>`;
-  }).join("")}
-    </div>
-  `;
-}
-
-function renderAdminRoles() {
-  const permissions = [
-    ["Créer un cours", true, true, false],
-    ["Valider un cours", true, false, false],
-    ["S'inscrire à un cours", true, true, true],
-    ["Émettre un certificat", true, false, false],
-    ["Gérer les utilisateurs", true, false, false]
-  ];
-  return `
-    <div class="breadcrumb"><span>Administration</span><span>Rôles</span></div>
-    <div class="page-header"><div><h1 class="page-title">Rôles & permissions</h1></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Permission</th><th>Admin</th><th>Formateur</th><th>Participant</th></tr></thead>
-        <tbody>
-          ${permissions.map(p => `<tr><td><strong>${p[0]}</strong></td><td>${p[1] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td><td>${p[2] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td><td>${p[3] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td></tr>`).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
+function persistAdminSettings() {
+  try {
+    localStorage.setItem(ADMIN_SETTINGS_STORAGE_KEY, JSON.stringify(adminSettings));
+  } catch (error) {
+    console.warn("[admin] Impossible d'enregistrer les paramÃ¨tres", error);
+  }
 }
 
 function renderAdminSettings() {
   const s = adminSettings;
   return `
-    <div class="breadcrumb"><span>Administration</span><span>Paramètres</span></div>
+    <div class="breadcrumb"><span>Administration</span><span>ParamÃ¨tres</span></div>
     <div class="page-header">
-      <div><h1 class="page-title">Paramètres LMS</h1><p class="page-subtitle">Ajustez les règles de la plateforme, les notifications et la sécurité.</p></div>
+      <div>
+        <h1 class="page-title">ParamÃ¨tres LMS</h1>
+        <p class="page-subtitle">Ajustez les rÃ¨gles de la plateforme, les notifications et la sÃ©curitÃ©.</p>
+      </div>
       <div class="page-actions">
-        <button class="btn btn-secondary" onclick="resetSettings()">${icon("x", 16)} Réinitialiser</button>
+        <button class="btn btn-secondary" onclick="resetSettings()">${icon("x", 16)} RÃ©initialiser</button>
         <button class="btn btn-primary" onclick="saveSettings()">${icon("check", 16)} Enregistrer</button>
       </div>
     </div>
+
     <div class="settings-grid">
       <section class="settings-card">
         <div class="card-head">Plateforme</div>
-        <div class="form-group"><label for="set_name">Nom de la plateforme</label><input class="form-control" type="text" id="set_name" value="${escapeHTML(s.platformName)}"></div>
-        <div class="form-group"><label for="set_language">Langue</label><select class="form-control" id="set_language"><option value="fr" ${s.language === "fr" ? "selected" : ""}>Français (Canada)</option><option value="en" ${s.language === "en" ? "selected" : ""}>English</option><option value="ar" ${s.language === "ar" ? "selected" : ""}>العربية</option></select></div>
-        <div class="form-group"><label for="set_timezone">Fuseau horaire</label><select class="form-control" id="set_timezone"><option value="America/Montreal" ${s.timezone === "America/Montreal" ? "selected" : ""}>America/Montreal (UTC-5)</option><option value="Africa/Tunis" ${s.timezone === "Africa/Tunis" ? "selected" : ""}>Africa/Tunis (UTC+1)</option><option value="Europe/Paris" ${s.timezone === "Europe/Paris" ? "selected" : ""}>Europe/Paris (UTC+1)</option></select></div>
-        <div class="form-group"><label for="set_currency">Devise</label><select class="form-control" id="set_currency"><option value="CAD" ${s.currency === "CAD" ? "selected" : ""}>CAD</option><option value="USD" ${s.currency === "USD" ? "selected" : ""}>USD</option><option value="EUR" ${s.currency === "EUR" ? "selected" : ""}>EUR</option><option value="TND" ${s.currency === "TND" ? "selected" : ""}>TND</option></select></div>
+        <div class="form-group">
+          <label for="set_name">Nom de la plateforme</label>
+          <input class="form-control" type="text" id="set_name" value="${escapeHTML(s.platformName)}">
+        </div>
+        <div class="form-group">
+          <label for="set_language">Langue par dÃ©faut</label>
+          <select class="form-control" id="set_language">
+            <option value="fr" ${s.language === "fr" ? "selected" : ""}>FranÃ§ais (Canada)</option>
+            <option value="en" ${s.language === "en" ? "selected" : ""}>English</option>
+            <option value="ar" ${s.language === "ar" ? "selected" : ""}>Ø§Ù„Ø¹Ø±Ø¨ÙŠØ©</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="set_timezone">Fuseau horaire</label>
+          <select class="form-control" id="set_timezone">
+            <option value="America/Montreal" ${s.timezone === "America/Montreal" ? "selected" : ""}>America/Montreal (UTC-5)</option>
+            <option value="Africa/Tunis" ${s.timezone === "Africa/Tunis" ? "selected" : ""}>Africa/Tunis (UTC+1)</option>
+            <option value="Europe/Paris" ${s.timezone === "Europe/Paris" ? "selected" : ""}>Europe/Paris (UTC+1)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="set_currency">Devise</label>
+          <select class="form-control" id="set_currency">
+            <option value="CAD" ${s.currency === "CAD" ? "selected" : ""}>CAD - Dollar canadien</option>
+            <option value="USD" ${s.currency === "USD" ? "selected" : ""}>USD - Dollar amÃ©ricain</option>
+            <option value="EUR" ${s.currency === "EUR" ? "selected" : ""}>EUR - Euro</option>
+            <option value="TND" ${s.currency === "TND" ? "selected" : ""}>TND - Dinar tunisien</option>
+          </select>
+        </div>
       </section>
+
       <section class="settings-card">
         <div class="card-head">Certificats</div>
-        <div class="form-group"><label for="set_cert_threshold">Seuil de progression (%)</label><input class="form-control" type="number" id="set_cert_threshold" min="0" max="100" value="${s.certThreshold}"></div>
-        <div class="form-group"><label for="set_cert_auto">Émission</label><select class="form-control" id="set_cert_auto"><option value="manual" ${!s.certAutoEmit ? "selected" : ""}>Manuelle (admin)</option><option value="auto" ${s.certAutoEmit ? "selected" : ""}>Automatique</option></select></div>
-        <div class="form-group"><label for="set_cert_format">Format de code</label><input class="form-control" type="text" id="set_cert_format" value="${escapeHTML(s.certCodeFormat)}"></div>
+        <div class="form-group">
+          <label for="set_cert_threshold">Seuil de progression pour certification</label>
+          <input class="form-control" type="number" id="set_cert_threshold" min="0" max="100" value="${s.certThreshold}">
+        </div>
+        <div class="form-group">
+          <label for="set_cert_auto">Ã‰mission automatique</label>
+          <select class="form-control" id="set_cert_auto">
+            <option value="manual" ${!s.certAutoEmit ? "selected" : ""}>Manuelle (validation admin)</option>
+            <option value="auto" ${s.certAutoEmit ? "selected" : ""}>Automatique dÃ¨s le seuil atteint</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="set_cert_format">Format de code</label>
+          <input class="form-control" type="text" id="set_cert_format" value="${escapeHTML(s.certCodeFormat)}">
+        </div>
+        <div class="settings-note">Les certificats suivent le seuil configurÃ© ci-dessus et peuvent Ãªtre gÃ©nÃ©rÃ©s automatiquement ou validÃ©s manuellement.</div>
       </section>
+
       <section class="settings-card">
         <div class="card-head">Notifications</div>
-        <label class="toggle-line"><input type="checkbox" id="set_notif_enroll_req" ${s.notifEnrollRequest ? "checked" : ""}> Demande d'inscription → admin</label>
-        <label class="toggle-line"><input type="checkbox" id="set_notif_enroll_dec" ${s.notifEnrollDecision ? "checked" : ""}> Décision admin → participant</label>
-        <label class="toggle-line"><input type="checkbox" id="set_notif_course" ${s.notifCourseSubmit ? "checked" : ""}> Cours soumis → admin</label>
-        <label class="toggle-line"><input type="checkbox" id="set_notif_grade" ${s.notifGrade ? "checked" : ""}> Devoir corrigé → participant</label>
-        <label class="toggle-line"><input type="checkbox" id="set_notif_cert" ${s.notifCertificate ? "checked" : ""}> Certificat émis → participant</label>
+        <label class="toggle-line"><input type="checkbox" id="set_notif_enroll_req" ${s.notifEnrollRequest ? "checked" : ""}> Demande d'inscription â†’ admin</label>
+        <label class="toggle-line"><input type="checkbox" id="set_notif_enroll_dec" ${s.notifEnrollDecision ? "checked" : ""}> DÃ©cision admin â†’ participant</label>
+        <label class="toggle-line"><input type="checkbox" id="set_notif_course" ${s.notifCourseSubmit ? "checked" : ""}> Cours soumis â†’ admin</label>
+        <label class="toggle-line"><input type="checkbox" id="set_notif_grade" ${s.notifGrade ? "checked" : ""}> Devoir corrigÃ© â†’ participant</label>
+        <label class="toggle-line"><input type="checkbox" id="set_notif_cert" ${s.notifCertificate ? "checked" : ""}> Certificat Ã©mis â†’ participant</label>
       </section>
+
       <section class="settings-card">
-        <div class="card-head">Sécurité</div>
-        <div class="form-group"><label for="set_pwd_policy">Politique de mot de passe</label><select class="form-control" id="set_pwd_policy"><option value="standard" ${s.passwordPolicy === "standard" ? "selected" : ""}>Standard (8 caractères min.)</option><option value="strong" ${s.passwordPolicy === "strong" ? "selected" : ""}>Renforcée (12 + spéciaux)</option></select></div>
-        <div class="form-group"><label for="set_mfa">Double authentification</label><select class="form-control" id="set_mfa"><option value="optional" ${s.mfa === "optional" ? "selected" : ""}>Optionnelle</option><option value="admins" ${s.mfa === "admins" ? "selected" : ""}>Requise pour les admins</option><option value="all" ${s.mfa === "all" ? "selected" : ""}>Requise pour tous</option></select></div>
-        <div class="form-group"><label for="set_session">Durée de session</label><select class="form-control" id="set_session"><option value="2h" ${s.sessionDuration === "2h" ? "selected" : ""}>2 heures</option><option value="8h" ${s.sessionDuration === "8h" ? "selected" : ""}>8 heures</option><option value="24h" ${s.sessionDuration === "24h" ? "selected" : ""}>24 heures</option></select></div>
+        <div class="card-head">SÃ©curitÃ©</div>
+        <div class="form-group">
+          <label for="set_pwd_policy">Politique de mot de passe</label>
+          <select class="form-control" id="set_pwd_policy">
+            <option value="standard" ${s.passwordPolicy === "standard" ? "selected" : ""}>Standard (8 caractÃ¨res min.)</option>
+            <option value="strong" ${s.passwordPolicy === "strong" ? "selected" : ""}>RenforcÃ©e (12 + spÃ©ciaux)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="set_mfa">Double authentification</label>
+          <select class="form-control" id="set_mfa">
+            <option value="optional" ${s.mfa === "optional" ? "selected" : ""}>Optionnelle</option>
+            <option value="admins" ${s.mfa === "admins" ? "selected" : ""}>Requise pour les admins</option>
+            <option value="all" ${s.mfa === "all" ? "selected" : ""}>Requise pour tous</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="set_session">DurÃ©e de session</label>
+          <select class="form-control" id="set_session">
+            <option value="2h" ${s.sessionDuration === "2h" ? "selected" : ""}>2 heures</option>
+            <option value="8h" ${s.sessionDuration === "8h" ? "selected" : ""}>8 heures</option>
+            <option value="24h" ${s.sessionDuration === "24h" ? "selected" : ""}>24 heures</option>
+          </select>
+        </div>
+        <div class="settings-note">Ces rÃ©glages protÃ¨gent les accÃ¨s administrateur et facilitent le contrÃ´le de la plateforme au quotidien.</div>
       </section>
     </div>
+
     <section class="danger-card">
       <div class="card-head danger">Zone de danger</div>
-      <p>Cette action supprime toutes les données locales sauvegardées. Elle est irréversible.</p>
-      <button class="btn btn-danger" onclick="if(confirm('Vider tout le cache LMS ?')) { clearLMSStorage(); location.reload(); }">${icon("x", 16)} Vider le cache LMS</button>
+      <p>Cette action supprime toutes les donnÃ©es locales sauvegardÃ©es par la dÃ©mo. Elle est irrÃ©versible.</p>
+      <button class="btn btn-danger" onclick="if(confirm('Vider tout le cache LMS ? Cette action est irrÃ©versible.')) { clearLMSStorage(); location.reload(); }">${icon("x", 16)} Vider le cache LMS</button>
     </section>
   `;
 }
 
-// =============================================================================
-// RENDER — FORMATEUR
-// =============================================================================
+const trainerCoursesByUser = {
+  trainer_1: ["course_admin_digitale", "course_gp_transfo", "course_employabilite", "course_ia_productivite"],
+  trainer_2: ["course_bi_data", "course_nocode", "course_marketing", "course_video", "course_cyber", "course_freelance"]
+};
 
-function trainerEmptyState(title, message) {
-  return `<div class="empty-state"><div class="empty-icon">${icon("clock", 26)}</div><h3>${escapeHTML(title)}</h3><p>${escapeHTML(message)}</p></div>`;
+const trainerSessions = [
+  { id: "ses_1", courseId: "course_admin_digitale", title: "Session 1 - Prise en main", startsAt: "2026-06-08T19:00:00", type: "zoom" },
+  { id: "ses_2", courseId: "course_gp_transfo", title: "Session 2 - Roadmap projet", startsAt: "2026-06-15T19:00:00", type: "zoom" },
+  { id: "ses_3", courseId: "course_ia_productivite", title: "Atelier - IA et productivité", startsAt: "2026-06-22T19:00:00", type: "event" },
+  { id: "ses_4", courseId: "course_bi_data", title: "Deadline - Devoir Power BI", startsAt: "2026-06-24T23:59:00", type: "deadline" }
+];
+
+const trainerEvaluations = [
+  { id: "eval_1", courseId: "course_admin_digitale", title: "Quiz - Administration digitale", kind: "quiz", status: "draft" },
+  { id: "eval_2", courseId: "course_gp_transfo", title: "Devoir - Roadmap numérique", kind: "devoir", status: "published" },
+  { id: "eval_3", courseId: "course_ia_productivite", title: "Exercice - Automatisation", kind: "autre", status: "published" }
+];
+
+const trainerSubmissions = [
+  { id: "sub_1", userId: "user_2", courseId: "course_admin_digitale", title: "Livrable 1 - Tableau de suivi", kind: "devoir", status: "submitted", submittedAt: "2026-06-20T10:15:00" },
+  { id: "sub_2", userId: "user_4", courseId: "course_video", title: "Document de travail", kind: "autre", status: "submitted", submittedAt: "2026-06-21T14:30:00" },
+  { id: "sub_3", userId: "user_6", courseId: "course_bi_data", title: "Dashboard Power BI - V1", kind: "devoir", status: "graded", submittedAt: "2026-06-19T11:40:00" },
+  { id: "sub_4", userId: "user_2", courseId: "course_gp_transfo", title: "Backlog priorisé", kind: "devoir", status: "submitted", submittedAt: "2026-06-22T09:00:00" }
+];
+
+const submissions = trainerSubmissions;
+
+function getTrainerCourseIds(uid) {
+  return trainerCoursesByUser[uid] || [];
 }
 
-function trainerCourseCard(course, uid) {
-  const participants = enrollments.filter(e => e.courseId === course.id);
-  const pending = trainerSubmissions.filter(s => s.courseId === course.id && s.status === "submitted").length;
-  const completed = participants.filter(e => getCourseProgress(e.userId, e.courseId) >= 70).length;
-  return `
-    <div class="card">
-      <div class="card-title">${icon("book", 18)} ${escapeHTML(course.title)}</div>
-      <p class="card-subtitle">${participants.length} participant${participants.length > 1 ? "s" : ""} • ${pending} devoir${pending > 1 ? "s" : ""} à corriger</p>
-      <div class="kpi-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px;">
-        <div class="kpi" style="padding:14px;"><div class="kpi-label">Inscrits</div><div class="kpi-value" style="font-size:24px;">${participants.length}</div></div>
-        <div class="kpi kpi--success" style="padding:14px;"><div class="kpi-label">Avancement</div><div class="kpi-value" style="font-size:24px;">${participants.length ? Math.round((completed / participants.length) * 100) : 0}%</div></div>
-        <div class="kpi kpi--accent" style="padding:14px;"><div class="kpi-label">Remises</div><div class="kpi-value" style="font-size:24px;">${pending}</div></div>
-      </div>
-      <div style="display:flex; gap:10px; flex-wrap:wrap;">
-        <button class="btn btn-secondary btn-sm" onclick="navigate('preview')">${icon("eye", 13)} Prévisualiser</button>
-        <button class="btn btn-primary btn-sm" onclick="navigate('remises')">${icon("upload", 13)} Voir les remises</button>
-      </div>
-    </div>
-  `;
+function getTrainerCourses(uid) {
+  const ids = getTrainerCourseIds(uid);
+  return courses.filter(course => ids.includes(course.id));
 }
 
-function renderTrainerDashboard(uid) {
-  const { trainerCourses, participants, submissions: subs, pendingCorrections, upcomingSessions } = getTrainerStats(uid);
-  const readyToGrade = subs.filter(s => s.status === "submitted").length;
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Tableau de bord</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Pilote d'enseignement</h1><p class="page-subtitle">Suivez vos cours, vos remises et vos prochaines sessions.</p></div>
-      <div class="page-actions">
-        <button class="btn btn-secondary" onclick="navigate('preview')">${icon("eye", 16)} Prévisualiser</button>
-        <button class="btn btn-primary" onclick="navigate('corrections')">${icon("edit", 16)} Corriger</button>
-      </div>
-    </div>
-    <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Mes formations</span><div class="kpi-icon">${icon("book", 18)}</div></div><div class="kpi-value">${trainerCourses.length}</div></div>
-      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Participants</span><div class="kpi-icon">${icon("users", 18)}</div></div><div class="kpi-value">${participants.length}</div></div>
-      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Devoirs à corriger</span><div class="kpi-icon">${icon("upload", 18)}</div></div><div class="kpi-value">${pendingCorrections}</div><div class="kpi-delta positive">${readyToGrade} remises à traiter</div></div>
-      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Séances à venir</span><div class="kpi-icon">${icon("calendar", 18)}</div></div><div class="kpi-value">${upcomingSessions}</div></div>
-    </div>
-    <div class="grid-main">
-      <div>
-        <div class="section-title"><h2>Mes cours</h2><a href="#" onclick="event.preventDefault(); navigate('myteaching')">Voir tout →</a></div>
-        <div class="grid-2">
-          ${trainerCourses.slice(0, 4).map(c => trainerCourseCard(c, uid)).join("") || trainerEmptyState("Aucun cours assigné", "Aucune formation n'est liée à votre compte.")}
-        </div>
-      </div>
-      <div>
-        <div class="card">
-          <h3 class="card-title">${icon("clock", 18)} Agenda proche</h3>
-          ${trainerSessions.map(s => {
-    const c = getCourse(s.courseId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${escapeHTML(s.title)}</strong></div><div class="activity-time">${c ? escapeHTML(c.title) : "-"} • ${fmtDate(s.startsAt)}</div></div></div>`;
-  }).join("")}
-        </div>
-        <div class="card" style="margin-top:16px;">
-          <h3 class="card-title">${icon("zap", 18)} Actions rapides</h3>
-          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('evaluations')">${icon("fileText", 14)} Gérer les évaluations</button>
-          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('participants')">${icon("users", 14)} Voir les participants</button>
-          <button class="btn btn-secondary" style="width:100%;" onclick="navigate('studio')">${icon("settings", 14)} Ouvrir le studio</button>
-        </div>
-      </div>
-    </div>
-  `;
+function getParticipantCourses(uid) {
+  return enrollments
+    .filter(enrollment => enrollment.userId === uid)
+    .map(enrollment => ({
+      enrollment,
+      course: getCourse(enrollment.courseId),
+      progress: getCourseProgress(uid, enrollment.courseId)
+    }));
 }
 
-function renderTrainerMyTeaching(uid) {
+function getTrainerStats(uid) {
   const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Mes formations</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Mes formations</h1><p class="page-subtitle">Les cours sous votre responsabilité.</p></div>
-      <div class="page-actions">
-        <button class="btn btn-secondary" onclick="navigate('courses')">${icon("book", 16)} Liste des cours</button>
-        <button class="btn btn-primary" onclick="navigate('import')">${icon("upload", 16)} Importer un cours</button>
-      </div>
-    </div>
-    <div class="grid-2">
-      ${trainerCourses.map(c => trainerCourseCard(c, uid)).join("") || trainerEmptyState("Aucune formation", "Votre compte n'est lié à aucune formation.")}
-    </div>
-  `;
+  const participants = enrollments.filter(enrollment => trainerCourses.some(course => course.id === enrollment.courseId));
+  const submissions = trainerSubmissions.filter(sub => trainerCourses.some(course => course.id === sub.courseId));
+  const pendingCorrections = submissions.filter(sub => sub.status === "submitted" && sub.kind === "devoir").length;
+  const upcomingSessions = trainerSessions.filter(session => trainerCourses.some(course => course.id === session.courseId)).length;
+  return { trainerCourses, participants, submissions, pendingCorrections, upcomingSessions };
 }
-
-function renderTrainerCourses(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Mes cours</span></div>
-    <div class="page-header"><div><h1 class="page-title">Mes cours</h1><p class="page-subtitle">${trainerCourses.length} cours dans votre périmètre.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Cours</th><th>Participants</th><th>Remises</th><th></th></tr></thead>
-        <tbody>
-          ${trainerCourses.map(c => {
-    const pCount = enrollments.filter(e => e.courseId === c.id).length;
-    const pending = trainerSubmissions.filter(s => s.courseId === c.id && s.status === "submitted").length;
-    return `<tr>
-              <td><strong>${escapeHTML(c.title)}</strong></td>
-              <td>${pCount}</td>
-              <td>${pending}</td>
-              <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="navigate('myteaching')">${icon("eye", 13)} Ouvrir</button></td>
-            </tr>`;
-  }).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTrainerCalendar(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Calendrier</span></div>
-    <div class="page-header"><div><h1 class="page-title">Calendrier</h1><p class="page-subtitle">Séances et échéances de vos cours.</p></div></div>
-    <div class="card">
-      ${trainerSessions.filter(s => trainerCourses.some(c => c.id === s.courseId)).map(s => {
-    const c = getCourse(s.courseId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${escapeHTML(s.title)}</strong></div><div class="activity-time">${c ? escapeHTML(c.title) : "-"} • ${fmtDate(s.startsAt)}</div></div></div>`;
-  }).join("") || trainerEmptyState("Aucun événement", "Aucune séance planifiée.")}
-    </div>
-  `;
-}
-
-function renderTrainerEvaluations(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const tab = appState.trainerEvalTab || "quiz";
-  const filtered = trainerEvaluations.filter(item => trainerCourses.some(c => c.id === item.courseId));
-  const visible = filtered.filter(item => tab === "quiz" ? item.kind === "quiz" : tab === "devoirs" ? item.kind === "devoir" : item.kind === "autre");
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Quiz & devoirs</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Quiz & devoirs</h1></div>
-      <div class="page-actions">
-        <button class="btn btn-secondary${tab === "quiz" ? " active" : ""}" onclick="appState.trainerEvalTab='quiz'; renderWorkspacePage('trainer','evaluations');">${icon("book", 14)} Quiz</button>
-        <button class="btn btn-secondary${tab === "devoirs" ? " active" : ""}" onclick="appState.trainerEvalTab='devoirs'; renderWorkspacePage('trainer','evaluations');">${icon("upload", 14)} Devoirs</button>
-        <button class="btn btn-secondary${tab === "autres" ? " active" : ""}" onclick="appState.trainerEvalTab='autres'; renderWorkspacePage('trainer','evaluations');">${icon("fileText", 14)} Autres</button>
-      </div>
-    </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Évaluation</th><th>Cours</th><th>Statut</th><th></th></tr></thead>
-        <tbody>
-          ${visible.map(item => {
-    const c = getCourse(item.courseId);
-    return `<tr>
-              <td><strong>${escapeHTML(item.title)}</strong></td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${renderStatusBadge(item.status)}</td>
-              <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="showToast('Ouverture de ${escapeHTML(item.title)}', 'info')">${icon("eye", 13)} Voir</button></td>
-            </tr>`;
-  }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune évaluation", "Aucun élément pour cet onglet.")}</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTrainerCorrections(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const pending = trainerSubmissions.filter(s => trainerCourses.some(c => c.id === s.courseId) && s.kind === "devoir" && s.status === "submitted");
-  const graded = trainerSubmissions.filter(s => trainerCourses.some(c => c.id === s.courseId) && s.kind === "devoir" && s.status === "graded");
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Corrections</span></div>
-    <div class="page-header"><div><h1 class="page-title">Corrections</h1><p class="page-subtitle">${pending.length} en attente · ${graded.length} corrigés</p></div></div>
-    <div class="grid-2">
-      <div class="card">
-        <h3 class="card-title">${icon("upload", 18)} À corriger</h3>
-        ${pending.map(s => {
-    const u = getUser(s.userId);
-    const c = getCourse(s.courseId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${escapeHTML(s.title)}</strong></div><div class="activity-time">${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"} • ${c ? escapeHTML(c.title) : "-"}</div></div></div>`;
-  }).join("") || trainerEmptyState("Aucun devoir en attente", "Toutes les remises ont été traitées.")}
-      </div>
-      <div class="card">
-        <h3 class="card-title">${icon("check", 18)} Récemment corrigés</h3>
-        ${graded.map(s => {
-    const u = getUser(s.userId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${escapeHTML(s.title)}</strong></div><div class="activity-time">${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"} • Noté</div></div></div>`;
-  }).join("") || trainerEmptyState("Aucune correction récente", "")}
-      </div>
-    </div>
-  `;
-}
-
-function renderTrainerRemises(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const items = trainerSubmissions.filter(s => trainerCourses.some(c => c.id === s.courseId));
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Remises</span></div>
-    <div class="page-header"><div><h1 class="page-title">Remises</h1><p class="page-subtitle">${items.length} remise(s) au total.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Élément</th><th>Formation</th><th>Statut</th></tr></thead>
-        <tbody>
-          ${items.map(item => {
-    const u = getUser(item.userId);
-    const c = getCourse(item.courseId);
-    return `<tr>
-              <td>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</td>
-              <td>${escapeHTML(item.title)}</td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${renderStatusBadge(item.status)}</td>
-            </tr>`;
-  }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune remise", "")}</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTrainerParticipants(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const enrolledIds = [...new Set(enrollments.filter(e => trainerCourses.some(c => c.id === e.courseId)).map(e => e.userId))];
-  const trainerParticipants = enrolledIds.map(id => getUser(id)).filter(Boolean);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Participants</span></div>
-    <div class="page-header"><div><h1 class="page-title">Participants</h1><p class="page-subtitle">${trainerParticipants.length} apprenants dans vos cours.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Formations</th><th>Progression</th></tr></thead>
-        <tbody>
-          ${trainerParticipants.map(u => {
-    const pCourses = getParticipantCourses(u.id).filter(item => trainerCourses.some(c => c.id === item.enrollment.courseId));
-    const avg = pCourses.length ? Math.round(pCourses.reduce((s, i) => s + i.progress, 0) / pCourses.length) : 0;
-    return `<tr>
-              <td><div class="person-cell"><span class="avatar">${u.avatar}</span><strong>${escapeHTML(`${u.firstName} ${u.lastName}`)}</strong></div></td>
-              <td>${pCourses.length}</td>
-              <td>${avg}%</td>
-            </tr>`;
-  }).join("") || `<tr><td colspan="3">${trainerEmptyState("Aucun participant", "")}</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTrainerTracking(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Suivi</span></div>
-    <div class="page-header"><div><h1 class="page-title">Suivi de mes cours</h1></div></div>
-    <div class="grid-2">
-      ${trainerCourses.map(c => {
-    const participants = getCourseParticipants(c.id);
-    const avg = participants.length ? Math.round(participants.reduce((s, i) => s + i.progress, 0) / participants.length) : 0;
-    return `<div class="card">
-          <div class="card-title">${icon("book", 18)} ${escapeHTML(c.title)}</div>
-          <div class="kpi-grid" style="grid-template-columns: repeat(2, 1fr); margin-top:12px;">
-            <div class="kpi" style="padding:12px;"><div class="kpi-label">Inscrits</div><div class="kpi-value" style="font-size:22px;">${participants.length}</div></div>
-            <div class="kpi kpi--success" style="padding:12px;"><div class="kpi-label">Progression</div><div class="kpi-value" style="font-size:22px;">${avg}%</div></div>
-          </div>
-        </div>`;
-  }).join("") || trainerEmptyState("Aucun cours", "")}
-    </div>
-  `;
-}
-
-function renderTrainerPreview(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Prévisualisation</span></div>
-    <div class="page-header"><div><h1 class="page-title">Prévisualisation</h1><p class="page-subtitle">Visualisez vos cours comme les verrait un apprenant.</p></div></div>
-    <div class="grid-2">
-      ${trainerCourses.map(c => `
-        <div class="card">
-          <div class="card-title">${icon("eye", 18)} ${escapeHTML(c.title)}</div>
-          <p class="card-subtitle">Aperçu du contenu, modules et ressources.</p>
-          <button class="btn btn-primary btn-sm" onclick="showToast('Prévisualisation de ${escapeHTML(c.title)}', 'success')">${icon("eye", 13)} Ouvrir l'aperçu</button>
-        </div>
-      `).join("") || trainerEmptyState("Aucun cours", "")}
-    </div>
-  `;
-}
-
-function renderTrainerSubmissions(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const items = trainerSubmissions.filter(s => trainerCourses.some(c => c.id === s.courseId));
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Demandes de validation</span></div>
-    <div class="page-header"><div><h1 class="page-title">Demandes de validation</h1></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Participant</th><th>Élément</th><th>Type</th><th>Statut</th></tr></thead>
-        <tbody>
-          ${items.map(item => {
-    const u = getUser(item.userId);
-    return `<tr>
-              <td>${u ? escapeHTML(`${u.firstName} ${u.lastName}`) : "-"}</td>
-              <td>${escapeHTML(item.title)}</td>
-              <td>${item.kind === "devoir" ? "Devoir" : "Document"}</td>
-              <td>${renderStatusBadge(item.status)}</td>
-            </tr>`;
-  }).join("")}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderTrainerStudio(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  const selected = trainerCourses.find(c => c.id === appState.trainerSelectedCourseId) || trainerCourses[0];
-  appState.trainerSelectedCourseId = selected ? selected.id : "";
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Studio</span></div>
-    <div class="page-header"><div><h1 class="page-title">Studio pédagogique</h1></div></div>
-    <div class="settings-grid">
-      <div class="settings-card">
-        <div class="card-head">Sélection du cours</div>
-        <select class="form-control" onchange="appState.trainerSelectedCourseId = this.value; renderWorkspacePage('trainer','studio');">
-          ${trainerCourses.map(c => `<option value="${c.id}" ${selected && selected.id === c.id ? "selected" : ""}>${escapeHTML(c.title)}</option>`).join("")}
-        </select>
-        ${selected ? `<div class="settings-note" style="margin-top:12px;">${escapeHTML(selected.title)} est le cours actuellement édité.</div>` : ""}
-      </div>
-      <div class="settings-card">
-        <div class="card-head">Outils rapides</div>
-        <button class="btn btn-secondary" onclick="showToast('Nouveau module', 'info')" style="width:100%; margin-bottom:8px;">${icon("plus", 14)} Ajouter un module</button>
-        <button class="btn btn-secondary" onclick="showToast('Nouvelle ressource', 'info')" style="width:100%; margin-bottom:8px;">${icon("upload", 14)} Ajouter une ressource</button>
-        <button class="btn btn-secondary" onclick="navigate('evaluations')" style="width:100%; margin-bottom:8px;">${icon("fileText", 14)} Gérer les évaluations</button>
-        <button class="btn btn-secondary" onclick="navigate('preview')" style="width:100%;">${icon("eye", 14)} Prévisualiser</button>
-      </div>
-    </div>
-  `;
-}
-
-function renderTrainerImport() {
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Import</span></div>
-    <div class="page-header"><div><h1 class="page-title">Import d'une formation</h1></div></div>
-    <div class="settings-grid">
-      <div class="settings-card">
-        <div class="card-head">Démarrer un import</div>
-        <p class="settings-note">Utilisez un paquet ZIP pour créer rapidement une nouvelle formation.</p>
-        <button class="btn btn-primary" onclick="showToast('Import en cours', 'success')">${icon("upload", 14)} Choisir un ZIP</button>
-      </div>
-      <div class="settings-card">
-        <div class="card-head">Structure attendue</div>
-        <div class="settings-note">Incluez les dossiers <strong>content</strong>, <strong>evaluation</strong> et <strong>resources</strong>.</div>
-      </div>
-    </div>
-  `;
-}
-
-// =============================================================================
-// RENDER — PARTICIPANT
-// =============================================================================
-
-function renderParticipantDashboard(uid) {
-  const participantCourses = getParticipantCourses(uid);
-  const nextCourse = participantCourses[0];
-  const completedCount = participantCourses.filter(i => i.progress >= 100).length;
-  const pendingAssignments = submissions.filter(s => s.userId === uid && s.status !== "graded").length;
-  return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Tableau de bord</span></div>
-    <div class="page-header">
-      <div><h1 class="page-title">Mon parcours</h1><p class="page-subtitle">Vos cours, votre progression et vos certificats.</p></div>
-      <div class="page-actions">
-        <button class="btn btn-secondary" onclick="navigate('courses')">${icon("book", 16)} Mes cours</button>
-        <button class="btn btn-primary" onclick="navigate('certificates')">${icon("award", 16)} Certificats</button>
-      </div>
-    </div>
-    <div class="kpi-grid">
-      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Cours suivis</span><div class="kpi-icon">${icon("book", 18)}</div></div><div class="kpi-value">${participantCourses.length}</div></div>
-      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Terminés</span><div class="kpi-icon">${icon("check", 18)}</div></div><div class="kpi-value">${completedCount}</div></div>
-      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Progression moyenne</span><div class="kpi-icon">${icon("chart", 18)}</div></div><div class="kpi-value">${participantCourses.length ? Math.round(participantCourses.reduce((s, i) => s + i.progress, 0) / participantCourses.length) : 0}%</div></div>
-      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Remises à suivre</span><div class="kpi-icon">${icon("upload", 18)}</div></div><div class="kpi-value">${pendingAssignments}</div></div>
-    </div>
-    <div class="grid-main">
-      <div>
-        <div class="section-title"><h2>Mes cours</h2><a href="#" onclick="event.preventDefault(); navigate('courses')">Voir tout →</a></div>
-        <div class="grid-2">
-          ${participantCourses.map(item => `
-            <div class="card">
-              <div class="card-title">${icon("book", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
-              <div class="settings-note">Progression : <strong>${item.progress}%</strong></div>
-              <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin:12px 0 14px;"><div style="width:${item.progress}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
-              <button class="btn btn-secondary btn-sm" onclick="navigate('assignments')">${icon("upload", 13)} Mes remises</button>
-            </div>
-          `).join("") || trainerEmptyState("Aucun cours", "Aucune formation liée à votre compte.")}
-        </div>
-      </div>
-      <div>
-        <div class="card">
-          <h3 class="card-title">${icon("clock", 18)} Prochaine étape</h3>
-          ${nextCourse ? `
-            <div class="activity-item">
-              <span class="activity-dot"></span>
-              <div class="activity-content">
-                <div><strong>${escapeHTML(nextCourse.course.title)}</strong></div>
-                <div class="activity-time">${fmtDate(nextCourse.enrollment.enrollmentDate)} • Démarrer par le premier module</div>
-              </div>
-            </div>
-          ` : trainerEmptyState("Rien à afficher", "Votre tableau se remplira dès votre première inscription.")}
-        </div>
-        <div class="card" style="margin-top:16px;">
-          <h3 class="card-title">${icon("award", 18)} Certificats</h3>
-          ${certificates.filter(cert => cert.userId === uid).map(cert => {
-    const c = getCourse(cert.courseId);
-    return `<div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>${c ? escapeHTML(c.title) : "Certificat"}</strong></div><div class="activity-time">${fmtDate(cert.issueDate)}</div></div></div>`;
-  }).join("") || trainerEmptyState("Aucun certificat", "Vos certificats apparaîtront ici.")}
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-function renderParticipantCourses(uid) {
-  const participantCourses = getParticipantCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Mes cours</span></div>
-    <div class="page-header"><div><h1 class="page-title">Mes cours</h1><p class="page-subtitle">Vos formations actives et votre progression.</p></div></div>
-    <div class="grid-2">
-      ${participantCourses.map(item => `
-        <div class="card">
-          <div class="card-title">${icon("book", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
-          <div class="settings-note">Inscrit le ${fmtDate(item.enrollment.enrollmentDate)} • Paiement ${item.enrollment.paymentStatus === "paid" ? "validé" : "en attente"}</div>
-          <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin:12px 0 14px;"><div style="width:${item.progress}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
-          <button class="btn btn-secondary btn-sm" onclick="navigate('calendar')">${icon("calendar", 13)} Calendrier</button>
-        </div>
-      `).join("") || trainerEmptyState("Aucun cours", "Aucune formation active.")}
-    </div>
-  `;
-}
-
-function renderParticipantAssignments(uid) {
-  const items = submissions.filter(s => s.userId === uid);
-  return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Remises</span></div>
-    <div class="page-header"><div><h1 class="page-title">Mes remises</h1><p class="page-subtitle">Vos devoirs déposés et leur statut.</p></div></div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>Remise</th><th>Formation</th><th>Type</th><th>Statut</th></tr></thead>
-        <tbody>
-          ${items.map(item => {
-    const c = getCourse(item.courseId);
-    return `<tr>
-              <td><strong>${escapeHTML(item.title)}</strong></td>
-              <td>${c ? escapeHTML(c.title) : "-"}</td>
-              <td>${item.kind === "devoir" ? "Devoir" : "Document"}</td>
-              <td>${renderStatusBadge(item.status)}</td>
-            </tr>`;
-  }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune remise", "Déposez votre premier document ici.")}</td></tr>`}
-        </tbody>
-      </table>
-    </div>
-  `;
-}
-
-function renderParticipantCertificates(uid) {
-  const items = certificates.filter(cert => cert.userId === uid);
-  return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Certificats</span></div>
-    <div class="page-header"><div><h1 class="page-title">Certificats</h1><p class="page-subtitle">Vos attestations obtenues.</p></div></div>
-    <div class="grid-2">
-      ${items.map(cert => {
-    const c = getCourse(cert.courseId);
-    return `<div class="card"><div class="card-title">${icon("award", 18)} ${c ? escapeHTML(c.title) : "Certificat"}</div><div class="settings-note">Émis le ${fmtDate(cert.issueDate)}</div></div>`;
-  }).join("") || trainerEmptyState("Aucun certificat", "Terminez vos formations pour obtenir un certificat.")}
-    </div>
-  `;
-}
-
-function renderParticipantCalendar(uid) {
-  const participantCourses = getParticipantCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Calendrier</span></div>
-    <div class="page-header"><div><h1 class="page-title">Calendrier</h1><p class="page-subtitle">Vos prochaines étapes et échéances.</p></div></div>
-    <div class="card">
-      ${participantCourses.map(item => `
-        <div class="activity-item">
-          <span class="activity-dot"></span>
-          <div class="activity-content">
-            <div><strong>${item.course ? escapeHTML(item.course.title) : "-"}</strong></div>
-            <div class="activity-time">Inscrit le ${fmtDate(item.enrollment.enrollmentDate)}</div>
-          </div>
-        </div>
-      `).join("") || trainerEmptyState("Aucun événement", "Votre calendrier apparaîtra une fois vos cours ouverts.")}
-    </div>
-  `;
-}
-
-// =============================================================================
-// SHELL & NAVIGATION
-// =============================================================================
 
 function setupWorkspaceShell(role) {
+  const currentUser = getSessionUser();
   const sidebar = document.querySelector(".sidebar");
   const topbar = document.querySelector(".topbar");
   if (!sidebar || !topbar) return;
 
-  // Dictionnaire centralisé des icônes pour éviter les répétitions
-  const icons = {
-    dashboard: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>`,
-    myteaching: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>`,
-    courses: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"></path><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"></path></svg>`,
-    calendar: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>`,
-    evaluations: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>`,
-    corrections: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3L22 4"></path><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path></svg>`,
-    remises: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
-    assignments: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>`,
-    participants: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
-    users: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>`,
-    tracking: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>`,
-    preview: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="11" cy="12" r="3"></circle></svg>`,
-    submissions: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
-    requests: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg>`,
-    studio: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>`,
-    import: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="14 10 12 12 10 10"></polyline><line x1="12" y1="2" x2="12" y2="12"></line></svg>`,
-    certificates: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22l-4-4H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4l-4 4z"></path></svg>`,
-    catalog: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>`,
-    settings: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`
-  };
-
+  const roleLabel = role === "trainer" ? "Espace formateur" : role === "participant" ? "Espace apprenant" : "Espace administrateur";
+  const brandLine = role === "trainer" ? "Teaching Studio" : "Learning Platform";
   const navItems = role === "trainer" ? [
     ["dashboard", "Tableau de bord"],
     ["myteaching", "Mes formations"],
@@ -1595,37 +931,1084 @@ function setupWorkspaceShell(role) {
     ["settings", "Paramètres"]
   ];
 
-  // Injection du HTML mis à jour avec injection du SVG correspondant à la clé 'view'
   sidebar.innerHTML = `
+    <div class="brand">
+      <div class="brand-mark">IC</div>
+      <div>
+        <strong>IC Canada Academy</strong>
+        <span>${brandLine}</span>
+      </div>
+    </div>
     <div class="sidebar-section-title">${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
     <nav class="nav-list">
-      ${navItems.map(([view, label], i) => {
-        const iconSvg = icons[view] || ''; // Récupère le SVG ou rien s'il n'existe pas
-        return `
-          <a class="nav-item${i === 0 ? " active" : ""}" href="#" data-view="${view}" ${i === 0 ? 'aria-current="page"' : ""}>
-            ${iconSvg}
-            <span>${label}</span>
-          </a>
-        `;
-      }).join("")}
+      ${navItems.map(([view, label], index) => `<a class="nav-item${index === 0 ? " active" : ""}" href="#" data-view="${view}" ${index === 0 ? 'aria-current="page"' : ""}>${label}</a>`).join("")}
     </nav>
   `;
 
-  const titleEl = topbar.querySelector(".topbar-title");
-  if (titleEl) titleEl.textContent = role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents";
+  topbar.innerHTML = `
+    <div>
+      <div class="topbar-kicker">${roleLabel}</div>
+      <div class="topbar-title">${role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents"}</div>
+    </div>
+    <div class="user-chip" aria-label="${currentUser.role === "trainer" ? "Formateur connecté" : "Administrateur connecté"}">
+      <span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span>
+      <span>${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim())}</span>
+    </div>
+  `;
+  document.title = role === "trainer" ? "Formateur - Tableau de bord" : "Administration - Tableau de bord";
+}
 
-  syncUserChip();
+function trainerCourseCard(course, uid) {
+  const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
+  const pending = trainerSubmissions.filter(sub => sub.courseId === course.id && sub.status === "submitted").length;
+  const completed = participants.filter(enrollment => getCourseProgress(enrollment.userId, enrollment.courseId) >= 70).length;
+  return `
+    <div class="card">
+      <div class="card-title">${icon("book", 18)} ${escapeHTML(course.title)}</div>
+      <p class="card-subtitle">${participants.length} participant${participants.length > 1 ? "s" : ""} • ${pending} devoir${pending > 1 ? "s" : ""} à corriger</p>
+      <div class="kpi-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 14px;">
+        <div class="kpi" style="padding:14px;"><div class="kpi-label">Inscrits</div><div class="kpi-value" style="font-size:24px;">${participants.length}</div></div>
+        <div class="kpi kpi--success" style="padding:14px;"><div class="kpi-label">Avancement</div><div class="kpi-value" style="font-size:24px;">${participants.length ? Math.round((completed / participants.length) * 100) : 0}%</div></div>
+        <div class="kpi kpi--accent" style="padding:14px;"><div class="kpi-label">Remises</div><div class="kpi-value" style="font-size:24px;">${pending}</div></div>
+      </div>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <button class="btn btn-secondary btn-sm" onclick="navigate('preview')">${icon("eye", 13)} Prévisualiser</button>
+        <button class="btn btn-primary btn-sm" onclick="navigate('remises')">${icon("upload", 13)} Voir les remises</button>
+      </div>
+    </div>
+  `;
+}
+
+function trainerEmptyState(title, message) {
+  return `<div class="empty-state"><div class="empty-icon">${icon("clock", 26)}</div><h3>${escapeHTML(title)}</h3><p>${escapeHTML(message)}</p></div>`;
+}
+
+function renderAdminTracking() {
+  const courseFilter = appState.trackingCourseFilter || "";
+  const groupFilter = appState.trackingGroupFilter || "";
+  const filteredEnrollments = enrollments.filter(enrollment => {
+    const matchesCourse = !courseFilter || enrollment.courseId === courseFilter;
+    const matchesGroup = !groupFilter || groups.some(group => group.id === groupFilter && group.members.includes(enrollment.userId) && group.courseId === enrollment.courseId);
+    return matchesCourse && matchesGroup;
+  });
+  const avgProgress = filteredEnrollments.length
+    ? Math.round(filteredEnrollments.reduce((sum, enrollment) => sum + getCourseProgress(enrollment.userId, enrollment.courseId), 0) / filteredEnrollments.length)
+    : 0;
+
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Suivi global</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Suivi global LMS</h1>
+        <p class="page-subtitle">Performance des formations, progression des cohortes et occupation des groupes.</p>
+      </div>
+      <div class="page-actions">
+        <select class="form-control" style="min-width:240px;" onchange="appState.trackingCourseFilter = this.value; renderAdminPage('tracking');">
+          <option value="">Toutes les formations</option>
+          ${courses.map(course => `<option value="${course.id}" ${courseFilter === course.id ? "selected" : ""}>${escapeHTML(course.title)}</option>`).join("")}
+        </select>
+        <select class="form-control" style="min-width:220px;" onchange="appState.trackingGroupFilter = this.value; renderAdminPage('tracking');">
+          <option value="">Tous les groupes</option>
+          ${groups.map(group => `<option value="${group.id}" ${groupFilter === group.id ? "selected" : ""}>${escapeHTML(group.name)}</option>`).join("")}
+        </select>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Inscriptions actives</span><div class="kpi-icon">${icon("users", 18)}</div></div><div class="kpi-value">${filteredEnrollments.length}</div></div>
+      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Progression moyenne</span><div class="kpi-icon">${icon("clock", 18)}</div></div><div class="kpi-value">${avgProgress}%</div></div>
+      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Certificats émis</span><div class="kpi-icon">${icon("award", 18)}</div></div><div class="kpi-value">${certificates.length}</div></div>
+      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Groupes visibles</span><div class="kpi-icon">${icon("layers", 18)}</div></div><div class="kpi-value">${groups.length}</div></div>
+    </div>
+
+    <div class="grid-main">
+      <div>
+        ${courses.filter(course => course.status === "published").map(course => {
+          const participants = getCourseParticipants(course.id);
+          const visible = !courseFilter || course.id === courseFilter;
+          if (!visible) return "";
+          const avg = participants.length ? Math.round(participants.reduce((sum, item) => sum + item.progress, 0) / participants.length) : 0;
+          return `
+            <div class="card" style="margin-bottom:16px;">
+              <div class="card-title">${icon("book", 18)} ${escapeHTML(course.title)}</div>
+              <div style="display:grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap:12px; margin-bottom:12px;">
+                <div><strong>${participants.length}</strong><div style="color:var(--text-muted); font-size:12px;">Inscrits</div></div>
+                <div><strong>${avg}%</strong><div style="color:var(--text-muted); font-size:12px;">Progression moyenne</div></div>
+                <div><strong>${certificates.filter(cert => cert.courseId === course.id).length}</strong><div style="color:var(--text-muted); font-size:12px;">Certificats</div></div>
+              </div>
+              <div class="table-wrap">
+                <table class="table">
+                  <thead><tr><th>Participant</th><th>Progression</th><th>Paiement</th></tr></thead>
+                  <tbody>
+                    ${participants.slice(0, 4).map(item => `
+                      <tr>
+                        <td><div class="person-cell"><span class="avatar">${item.user ? item.user.avatar : "?"}</span><strong>${item.user ? escapeHTML(`${item.user.firstName} ${item.user.lastName}`) : "-"}</strong></div></td>
+                        <td>${item.progress}%</td>
+                        <td>${paymentStatusLabel(effectivePaymentStatus(item.enrollment))}</td>
+                      </tr>
+                    `).join("")}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          `;
+        }).join("") || '<div class="empty-state"><h3>Aucune donnée pour ce filtre</h3><p>Sélectionnez une autre formation ou un autre groupe.</p></div>'}
+      </div>
+
+      <div>
+        <div class="card">
+          <h3 class="card-title">${icon("layers", 18)} Cohortes</h3>
+          ${groups.map(group => {
+            const course = getCourse(group.courseId);
+            return `
+              <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                  <div><strong>${escapeHTML(group.name)}</strong></div>
+                  <div class="activity-time">${course ? escapeHTML(course.title) : "-"} • ${group.members.length} membres</div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminUsers() {
+  const roleFilter = appState.usersRoleFilter || "all";
+  const filteredUsers = users.filter(user => roleFilter === "all" || user.role === roleFilter);
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Utilisateurs</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Utilisateurs</h1>
+        <p class="page-subtitle">${users.length} comptes actifs sur la plateforme.</p>
+      </div>
+      <div class="page-actions">
+        <select class="form-control" style="min-width:220px;" onchange="appState.usersRoleFilter = this.value; renderAdminPage('users');">
+          <option value="all" ${roleFilter === "all" ? "selected" : ""}>Tous les rôles</option>
+          <option value="admin" ${roleFilter === "admin" ? "selected" : ""}>Administrateurs</option>
+          <option value="trainer" ${roleFilter === "trainer" ? "selected" : ""}>Formateurs</option>
+          <option value="participant" ${roleFilter === "participant" ? "selected" : ""}>Participants</option>
+        </select>
+        <button class="btn btn-secondary" onclick="showToast('Import CSV utilisateurs (démo)', 'info')">${icon("upload", 14)} Import CSV</button>
+        <button class="btn btn-primary" onclick="openCreateUser()">${icon("plus", 14)} Nouvel utilisateur</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Formation(s)</th><th></th></tr></thead>
+        <tbody>
+          ${filteredUsers.map(user => {
+            const enrollCount = enrollments.filter(enrollment => enrollment.userId === user.id).length;
+            const roleClass = user.role === "admin" ? "badge badge--danger" : user.role === "trainer" ? "badge badge--info" : "badge badge--success";
+            const roleLabel = user.role === "admin" ? "Admin" : user.role === "trainer" ? "Formateur" : "Participant";
+            return `
+              <tr>
+                <td><div class="person-cell"><span class="avatar">${user.avatar}</span><strong>${escapeHTML(`${user.firstName} ${user.lastName}`)}</strong></div></td>
+                <td><span class="${roleClass}">${roleLabel}</span></td>
+                <td>${enrollCount}</td>
+                <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation du compte ${escapeHTML(user.firstName)}', 'info')">${icon("eye", 13)} Voir</button></td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminRoles() {
+  const permissions = [
+    ["Créer un cours", true, true, false],
+    ["Valider un cours", true, false, false],
+    ["S'inscrire à un cours", true, true, true],
+    ["Émettre un certificat", true, false, false],
+    ["Gérer les utilisateurs", true, false, false]
+  ];
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Rôles</span></div>
+    <div class="page-header"><div><h1 class="page-title">Rôles & permissions</h1><p class="page-subtitle">Matrice simplifiée des droits visibles dans l'interface.</p></div></div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Permission</th><th>Admin</th><th>Formateur</th><th>Participant</th></tr></thead>
+        <tbody>
+          ${permissions.map(permission => `<tr><td><strong>${permission[0]}</strong></td><td>${permission[1] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td><td>${permission[2] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td><td>${permission[3] ? renderStatusBadge("approved") : renderStatusBadge("needs_correction")}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminCatalog() {
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Catalogue</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Catalogue des formations</h1>
+        <p class="page-subtitle">${courses.length} formations publiées dans le LMS.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Formation</th><th>Inscriptions</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          ${courses.map(course => `
+            <tr>
+              <td><strong>${escapeHTML(course.title)}</strong></td>
+              <td>${enrollments.filter(enrollment => enrollment.courseId === course.id).length}</td>
+              <td>${renderStatusBadge(course.status)}</td>
+              <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Aperçu du cours ${escapeHTML(course.title)}', 'info')">${icon("eye", 13)} Voir</button></td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminCourseReview() {
+  const pendingCourses = getCoursesByStatus("submitted_for_review");
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Validation des cours</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Validation des cours</h1>
+        <p class="page-subtitle">Aucune soumission en attente pour cette démo, mais le workflow reste en place.</p>
+      </div>
+    </div>
+    ${pendingCourses.length ? `
+      <div class="grid-2">${pendingCourses.map(course => `<div class="card"><h3 class="card-title">${escapeHTML(course.title)}</h3><p class="card-subtitle">Cours soumis pour examen.</p></div>`).join("")}</div>
+    ` : '<div class="empty-state"><h3>Aucun cours à examiner</h3><p>Les cours publiés sont déjà validés dans la maquette de démonstration.</p></div>'}
+  `;
+}
+
+function renderAdminRequests() {
+  const pendingRequests = getRequestsByStatus("pending");
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Demandes</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Demandes d'inscription</h1>
+        <p class="page-subtitle">${pendingRequests.length} demande(s) en attente de traitement.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Formation</th><th>Date</th><th></th></tr></thead>
+        <tbody>
+          ${pendingRequests.map(request => {
+            const user = getUser(request.userId);
+            const course = getCourse(request.courseId);
+            return `
+              <tr>
+                <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
+                <td>${course ? escapeHTML(course.title) : "-"}</td>
+                <td>${fmtDate(request.requestedAt)}</td>
+                <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="openRequest('${request.id}')">${icon("eye", 13)} Examiner</button></td>
+              </tr>
+            `;
+          }).join("") || '<tr><td colspan="4"><div class="empty-state"><h3>Aucune demande</h3><p>Tout est à jour.</p></div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminEnrollments() {
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Inscriptions</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Inscriptions</h1>
+        <p class="page-subtitle">Vue rapide des inscriptions actives et de leur paiement.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Formation</th><th>Progression</th><th>Paiement</th></tr></thead>
+        <tbody>
+          ${enrollments.map(enrollment => {
+            const user = getUser(enrollment.userId);
+            const course = getCourse(enrollment.courseId);
+            return `
+              <tr>
+                <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
+                <td>${course ? escapeHTML(course.title) : "-"}</td>
+                <td>${getCourseProgress(enrollment.userId, enrollment.courseId)}%</td>
+                <td>${paymentStatusLabel(enrollment.paymentStatus)}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminGroups() {
+  const selectedGroup = groups[0];
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Groupes & accès</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Groupes & accès</h1>
+        <p class="page-subtitle">Gestion des cohortes et du verrouillage des modules.</p>
+      </div>
+    </div>
+    <div class="grid-main">
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th>Groupe</th><th>Formation</th><th>Membres</th></tr></thead>
+          <tbody>
+            ${groups.map(group => {
+              const course = getCourse(group.courseId);
+              return `
+                <tr>
+                  <td><strong>${escapeHTML(group.name)}</strong></td>
+                  <td>${course ? escapeHTML(course.title) : "-"}</td>
+                  <td>${group.members.length}</td>
+                </tr>
+              `;
+            }).join("")}
+          </tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3 class="card-title">${icon("layers", 18)} Accès du groupe</h3>
+        ${accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
+          <div class="activity-item">
+            <span class="activity-dot"></span>
+            <div class="activity-content">
+              <div><strong>${escapeHTML(rule.module)}</strong></div>
+              <div class="activity-time">${rule.open ? "Ouvert" : "Verrouillé"}</div>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminPayments() {
+  const totalPaid = payments.filter(payment => payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Paiements</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Paiements</h1>
+        <p class="page-subtitle">${fmtMoney(totalPaid)} encaissés dans cette démo.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Référence</th><th>Montant</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${payments.map(payment => `<tr><td>${escapeHTML(payment.id)}</td><td>${fmtMoney(payment.amount)}</td><td>${paymentStatusLabel(payment.status)}</td></tr>`).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminCertificates() {
+  const eligible = enrollments.filter(enrollment => getCourseProgress(enrollment.userId, enrollment.courseId) >= 80);
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Certificats</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Certificats</h1>
+        <p class="page-subtitle">${certificates.length} certificat(s) déjà émis, ${eligible.length} éligible(s).</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Formation</th><th>Éligibilité</th></tr></thead>
+        <tbody>
+          ${eligible.map(enrollment => {
+            const user = getUser(enrollment.userId);
+            const course = getCourse(enrollment.courseId);
+            return `
+              <tr>
+                <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
+                <td>${course ? escapeHTML(course.title) : "-"}</td>
+                <td>${renderStatusBadge("approved")}</td>
+              </tr>
+            `;
+          }).join("") || '<tr><td colspan="3"><div class="empty-state"><h3>Aucun participant éligible</h3><p>La progression minimale n’est pas encore atteinte.</p></div></td></tr>'}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderAdminImportExport() {
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Import / Export</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Import / Export</h1>
+        <p class="page-subtitle">Sauvegarde et synchronisation des données de la plateforme.</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="settings-card">
+        <div class="card-head">Export</div>
+        <p class="settings-note">Exporte les utilisateurs, formations, inscriptions et paiements vers une archive JSON de démonstration.</p>
+        <button class="btn btn-primary" onclick="showToast('Export généré (démo)', 'success')">${icon("download", 14)} Export complet</button>
+      </div>
+      <div class="settings-card">
+        <div class="card-head">Import</div>
+        <p class="settings-note">Charge un fichier de démonstration pour restaurer un environnement similaire à la maquette.</p>
+        <button class="btn btn-secondary" onclick="showToast('Import simulé (démo)', 'info')">${icon("upload", 14)} Importer</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderAdminActivity() {
+  return `
+    <div class="breadcrumb"><span>Administration</span><span>Journal d'activité</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Journal d'activité</h1>
+        <p class="page-subtitle">Historique récent des actions marquantes sur la plateforme.</p>
+      </div>
+    </div>
+    <div class="card">
+      ${activityLog.map(entry => {
+        const actor = getUser(entry.actorId);
+        return `
+          <div class="activity-item">
+            <span class="activity-dot"></span>
+            <div class="activity-content">
+              <div><strong>${escapeHTML(entry.details)}</strong></div>
+              <div class="activity-time">${actor ? escapeHTML(`${actor.firstName} ${actor.lastName}`) : "-"} • ${fmtDate(entry.at)}</div>
+            </div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderTrainerDashboard(uid) {
+  const { trainerCourses, participants, submissions, pendingCorrections, upcomingSessions } = getTrainerStats(uid);
+  const readyToGrade = submissions.filter(sub => sub.status === "submitted").length;
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Tableau de bord</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Pilote d'enseignement</h1>
+        <p class="page-subtitle">Suivez vos cours, vos remises et vos prochaines sessions depuis un seul écran.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="navigate('preview')">${icon("eye", 16)} Prévisualiser</button>
+        <button class="btn btn-primary" onclick="navigate('corrections')">${icon("edit", 16)} Corriger</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Mes formations</span><div class="kpi-icon">${icon("book", 18)}</div></div><div class="kpi-value">${trainerCourses.length}</div><div class="kpi-delta">cours suivis</div></div>
+      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Participants</span><div class="kpi-icon">${icon("users", 18)}</div></div><div class="kpi-value">${participants.length}</div><div class="kpi-delta">${participants.length ? "apprenants actifs" : "aucun apprenant"}</div></div>
+      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Devoirs à corriger</span><div class="kpi-icon">${icon("upload", 18)}</div></div><div class="kpi-value">${pendingCorrections}</div><div class="kpi-delta positive">${readyToGrade} remises à traiter</div></div>
+      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Séances à venir</span><div class="kpi-icon">${icon("calendar", 18)}</div></div><div class="kpi-value">${upcomingSessions}</div></div>
+    </div>
+
+    <div class="grid-main">
+      <div>
+        <div class="section-title"><h2>Mes cours</h2><a href="#" onclick="event.preventDefault(); navigate('myteaching')">Voir tout →</a></div>
+        <div class="grid-2">
+          ${trainerCourses.slice(0, 4).map(course => trainerCourseCard(course, uid)).join("") || trainerEmptyState("Aucun cours assigné", "Aucune formation n'est liée à votre compte formateur.")}
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3 class="card-title">${icon("clock", 18)} Agenda proche</h3>
+          ${trainerSessions.map(session => {
+            const course = getCourse(session.courseId);
+            return `
+              <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                  <div><strong>${escapeHTML(session.title)}</strong></div>
+                  <div class="activity-time">${course ? escapeHTML(course.title) : "-"} • ${fmtDate(session.startsAt)}</div>
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3 class="card-title">${icon("zap", 18)} Actions rapides</h3>
+          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('evaluations')">${icon("fileText", 14)} Gérer les évaluations</button>
+          <button class="btn btn-secondary" style="width:100%; margin-bottom:8px;" onclick="navigate('participants')">${icon("users", 14)} Voir les participants</button>
+          <button class="btn btn-secondary" style="width:100%;" onclick="navigate('studio')">${icon("settings", 14)} Ouvrir le studio</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrainerMyTeaching(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Mes formations</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mes formations</h1>
+        <p class="page-subtitle">Les cours sous votre responsabilité et leur état global.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="navigate('courses')">${icon("book", 16)} Liste des cours</button>
+        <button class="btn btn-primary" onclick="navigate('import')">${icon("upload", 16)} Importer un cours</button>
+      </div>
+    </div>
+    <div class="grid-2">
+      ${trainerCourses.map(course => trainerCourseCard(course, uid)).join("") || trainerEmptyState("Aucune formation", "Votre compte formateur n'est lié à aucune formation pour le moment.")}
+    </div>
+  `;
+}
+
+function renderTrainerCourses(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Mes cours</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mes cours</h1>
+        <p class="page-subtitle">${trainerCourses.length} cours visibles dans votre périmètre.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Cours</th><th>Participants</th><th>Remises</th><th></th></tr></thead>
+        <tbody>
+          ${trainerCourses.map(course => {
+            const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
+            const pending = trainerSubmissions.filter(sub => sub.courseId === course.id && sub.status === "submitted").length;
+            return `
+              <tr>
+                <td><strong>${escapeHTML(course.title)}</strong></td>
+                <td>${participants.length}</td>
+                <td>${pending}</td>
+                <td class="td-actions">
+                  <button class="btn btn-sm btn-secondary" onclick="navigate('myteaching')">${icon("eye", 13)} Ouvrir</button>
+                </td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTrainerCalendar(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Calendrier</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Calendrier</h1>
+        <p class="page-subtitle">Séances Zoom, ateliers et échéances de vos cours.</p>
+      </div>
+    </div>
+    <div class="card">
+      ${trainerSessions.filter(session => trainerCourses.some(course => course.id === session.courseId)).map(session => {
+        const course = getCourse(session.courseId);
+        return `
+          <div class="activity-item">
+            <span class="activity-dot"></span>
+            <div class="activity-content">
+              <div><strong>${escapeHTML(session.title)}</strong></div>
+              <div class="activity-time">${course ? escapeHTML(course.title) : "-"} • ${fmtDate(session.startsAt)}</div>
+            </div>
+          </div>
+        `;
+      }).join("") || trainerEmptyState("Aucun événement", "Aucune séance n'est planifiée pour vos cours.")}
+    </div>
+  `;
+}
+
+function renderTrainerEvaluations(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const tab = appState.trainerEvalTab || "quiz";
+  const filtered = trainerEvaluations.filter(item => trainerCourses.some(course => course.id === item.courseId));
+  const quizCount = filtered.filter(item => item.kind === "quiz").length;
+  const devoirCount = filtered.filter(item => item.kind === "devoir").length;
+  const autreCount = filtered.filter(item => item.kind === "autre").length;
+  const visible = filtered.filter(item => tab === "quiz" ? item.kind === "quiz" : tab === "devoirs" ? item.kind === "devoir" : item.kind === "autre");
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Quiz & devoirs</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Quiz & devoirs</h1>
+        <p class="page-subtitle">${quizCount} quiz • ${devoirCount} devoirs • ${autreCount} autres ressources évaluatives</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="appState.trainerEvalTab='quiz'; renderWorkspacePage('formateur','evaluations');">${icon("book", 14)} Quiz</button>
+        <button class="btn btn-secondary" onclick="appState.trainerEvalTab='devoirs'; renderWorkspacePage('formateur','evaluations');">${icon("upload", 14)} Devoirs</button>
+        <button class="btn btn-secondary" onclick="appState.trainerEvalTab='autres'; renderWorkspacePage('formateur','evaluations');">${icon("fileText", 14)} Autres</button>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Évaluation</th><th>Cours</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          ${visible.map(item => {
+            const course = getCourse(item.courseId);
+            return `
+              <tr>
+                <td><strong>${escapeHTML(item.title)}</strong></td>
+                <td>${course ? escapeHTML(course.title) : "-"}</td>
+                <td>${renderStatusBadge(item.status)}</td>
+                <td class="td-actions"><button class="btn btn-sm btn-primary" onclick="showToast('Ouverture de ${escapeHTML(item.title)}', 'info')">${icon("eye", 13)} Voir</button></td>
+              </tr>
+            `;
+          }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune évaluation", "Aucun élément ne correspond à l'onglet sélectionné.")}</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTrainerCorrections(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const pending = trainerSubmissions.filter(sub => trainerCourses.some(course => course.id === sub.courseId) && sub.kind === "devoir" && sub.status === "submitted");
+  const graded = trainerSubmissions.filter(sub => trainerCourses.some(course => course.id === sub.courseId) && sub.kind === "devoir" && sub.status === "graded");
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Corrections</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Corrections de devoirs</h1>
+        <p class="page-subtitle">${pending.length} devoir${pending.length > 1 ? "s" : ""} en attente, ${graded.length} déjà corrigé${graded.length > 1 ? "s" : ""}.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3 class="card-title">${icon("upload", 18)} À corriger</h3>
+        ${pending.map(sub => {
+          const user = getUser(sub.userId);
+          const course = getCourse(sub.courseId);
+          return `
+            <div class="activity-item">
+              <span class="activity-dot"></span>
+              <div class="activity-content">
+                <div><strong>${escapeHTML(sub.title)}</strong></div>
+                <div class="activity-time">${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"} • ${course ? escapeHTML(course.title) : "-"}</div>
+              </div>
+            </div>
+          `;
+        }).join("") || trainerEmptyState("Aucun devoir en attente", "Toutes les remises de devoirs ont déjà été traitées.")}
+      </div>
+      <div class="card">
+        <h3 class="card-title">${icon("check", 18)} Récemment corrigés</h3>
+        ${graded.map(sub => {
+          const user = getUser(sub.userId);
+          return `
+            <div class="activity-item">
+              <span class="activity-dot"></span>
+              <div class="activity-content">
+                <div><strong>${escapeHTML(sub.title)}</strong></div>
+                <div class="activity-time">${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"} • Noté</div>
+              </div>
+            </div>
+          `;
+        }).join("") || trainerEmptyState("Aucun devoir corrigé", "Aucune correction récente n'est disponible.")}
+      </div>
+    </div>
+  `;
+}
+
+function renderTrainerRemises(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const submissions = trainerSubmissions.filter(sub => trainerCourses.some(course => course.id === sub.courseId));
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Remises</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Remises</h1>
+        <p class="page-subtitle">Tous les fichiers déposés par les participants, devoirs ou documents complémentaires.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Remise</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${submissions.map(sub => {
+            const user = getUser(sub.userId);
+            return `
+              <tr>
+                <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
+                <td><strong>${escapeHTML(sub.title)}</strong></td>
+                <td>${sub.kind === "devoir" ? "Devoir" : "Autre"}</td>
+                <td>${renderStatusBadge(sub.status)}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTrainerParticipants(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const rows = enrollments.filter(enrollment => trainerCourses.some(course => course.id === enrollment.courseId)).map(enrollment => {
+    const user = getUser(enrollment.userId);
+    const course = getCourse(enrollment.courseId);
+    return { user, course, progress: getCourseProgress(enrollment.userId, enrollment.courseId), enrollment };
+  });
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Participants</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Participants</h1>
+        <p class="page-subtitle">Suivi des apprenants inscrits dans vos formations.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Formation</th><th>Progression</th><th>Paiement</th></tr></thead>
+        <tbody>
+          ${rows.map(row => `
+            <tr>
+              <td><div class="person-cell"><span class="avatar">${row.user ? row.user.avatar : "?"}</span><strong>${row.user ? escapeHTML(`${row.user.firstName} ${row.user.lastName}`) : "-"}</strong></div></td>
+              <td>${row.course ? escapeHTML(row.course.title) : "-"}</td>
+              <td>${row.progress}%</td>
+              <td>${paymentStatusLabel(row.enrollment.paymentStatus)}</td>
+            </tr>
+          `).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTrainerTracking(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Suivi</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Suivi de progression</h1>
+        <p class="page-subtitle">Vue d'ensemble des cohortes et de l'avancement de vos apprenants.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      ${trainerCourses.map(course => {
+        const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
+        const avg = participants.length ? Math.round(participants.reduce((sum, enrollment) => sum + getCourseProgress(enrollment.userId, enrollment.courseId), 0) / participants.length) : 0;
+        return `
+          <div class="card">
+            <div class="card-title">${icon("chart", 18)} ${escapeHTML(course.title)}</div>
+            <div class="kpi-value" style="font-size:28px;">${avg}%</div>
+            <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin-top:10px;"><div class="progress-bar-fill" style="width:${avg}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
+          </div>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function renderTrainerPreview(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Prévisualisation</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Prévisualisation</h1>
+        <p class="page-subtitle">Visualisez votre cours comme le verrait un apprenant.</p>
+      </div>
+    </div>
+    <div class="grid-2">
+      ${trainerCourses.map(course => `
+        <div class="card">
+          <div class="card-title">${icon("eye", 18)} ${escapeHTML(course.title)}</div>
+          <p class="card-subtitle">Aperçu du contenu, des modules et des ressources.</p>
+          <button class="btn btn-primary btn-sm" onclick="showToast('Ouverture de la prévisualisation ${escapeHTML(course.title)}', 'success')">${icon("eye", 13)} Ouvrir l'aperçu</button>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderTrainerSubmissions(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const items = trainerSubmissions.filter(sub => trainerCourses.some(course => course.id === sub.courseId));
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Demandes de validation</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Demandes de validation</h1>
+        <p class="page-subtitle">Remises et documents à relire avant validation.</p>
+      </div>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Participant</th><th>Élément</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${items.map(item => {
+            const user = getUser(item.userId);
+            return `
+              <tr>
+                <td>${user ? escapeHTML(`${user.firstName} ${user.lastName}`) : "-"}</td>
+                <td>${escapeHTML(item.title)}</td>
+                <td>${item.kind === "devoir" ? "Devoir" : "Document"}</td>
+                <td>${renderStatusBadge(item.status)}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderTrainerStudio(uid) {
+  const trainerCourses = getTrainerCourses(uid);
+  const selectedCourse = trainerCourses.find(course => course.id === appState.trainerSelectedCourseId) || trainerCourses[0];
+  appState.trainerSelectedCourseId = selectedCourse ? selectedCourse.id : "";
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Studio</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Studio pédagogique</h1>
+        <p class="page-subtitle">Outils rapides pour faire évoluer vos contenus et vos évaluations.</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="settings-card">
+        <div class="card-head">Sélection du cours</div>
+        <select class="form-control" onchange="appState.trainerSelectedCourseId = this.value; renderWorkspacePage('formateur','studio');">
+          ${trainerCourses.map(course => `<option value="${course.id}" ${selectedCourse && selectedCourse.id === course.id ? "selected" : ""}>${escapeHTML(course.title)}</option>`).join("")}
+        </select>
+        ${selectedCourse ? `
+          <div class="settings-note" style="margin-top:12px;">${escapeHTML(selectedCourse.title)} est le cours actuellement édité dans le studio.</div>
+        ` : trainerEmptyState("Aucun cours", "Sélectionnez un cours pour entrer dans le studio.")}
+      </div>
+      <div class="settings-card">
+        <div class="card-head">Outils rapides</div>
+        <button class="btn btn-secondary" onclick="showToast('Nouveau module (démo)', 'info')" style="width:100%; margin-bottom:8px;">${icon("plus", 14)} Ajouter un module</button>
+        <button class="btn btn-secondary" onclick="showToast('Nouvelle ressource (démo)', 'info')" style="width:100%; margin-bottom:8px;">${icon("upload", 14)} Ajouter une ressource</button>
+        <button class="btn btn-secondary" onclick="navigate('evaluations')" style="width:100%; margin-bottom:8px;">${icon("fileText", 14)} Gérer les évaluations</button>
+        <button class="btn btn-secondary" onclick="navigate('preview')" style="width:100%;">${icon("eye", 14)} Prévisualiser</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderTrainerImport(uid) {
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Import</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Import d'une formation</h1>
+        <p class="page-subtitle">Import réel du ZIP: cours, modules, quiz, devoirs et ressources.</p>
+      </div>
+    </div>
+    <div class="settings-grid">
+      <div class="settings-card">
+        <div class="card-head">Démarrer un import</div>
+        <p class="settings-note">Utilisez un paquet ZIP pour créer rapidement une nouvelle formation au format pédagogique attendu.</p>
+        <button class="btn btn-primary" onclick="showToast('Lancement de l'import (démo)', 'success')">${icon("upload", 14)} Choisir un ZIP</button>
+      </div>
+      <div class="settings-card">
+        <div class="card-head">Conseils de structure</div>
+        <div class="settings-note">Incluez les dossiers <strong>content</strong>, <strong>evaluation</strong> et <strong>resources</strong> pour obtenir un import cohérent.</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderParticipantDashboard(uid) {
+  const participantCourses = getParticipantCourses(uid);
+  const nextCourse = participantCourses[0];
+  const completedCount = participantCourses.filter(item => item.progress >= 100).length;
+  const pendingAssignments = submissions.filter(sub => sub.userId === uid && sub.status !== "graded").length;
+  return `
+    <div class="breadcrumb"><span>Espace Apprenant</span><span>Tableau de bord</span></div>
+    <div class="page-header">
+      <div>
+        <h1 class="page-title">Mon parcours</h1>
+        <p class="page-subtitle">Vos cours, votre progression et vos certificats au même endroit.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="navigate('courses')">${icon("book", 16)} Mes cours</button>
+        <button class="btn btn-primary" onclick="navigate('certificates')">${icon("award", 16)} Certificats</button>
+      </div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="kpi-head"><span class="kpi-label">Cours suivis</span><div class="kpi-icon">${icon("book", 18)}</div></div><div class="kpi-value">${participantCourses.length}</div></div>
+      <div class="kpi kpi--success"><div class="kpi-head"><span class="kpi-label">Terminés</span><div class="kpi-icon">${icon("check", 18)}</div></div><div class="kpi-value">${completedCount}</div></div>
+      <div class="kpi kpi--accent"><div class="kpi-head"><span class="kpi-label">Progression moyenne</span><div class="kpi-icon">${icon("chart", 18)}</div></div><div class="kpi-value">${participantCourses.length ? Math.round(participantCourses.reduce((sum, item) => sum + item.progress, 0) / participantCourses.length) : 0}%</div></div>
+      <div class="kpi kpi--gold"><div class="kpi-head"><span class="kpi-label">Remises à suivre</span><div class="kpi-icon">${icon("upload", 18)}</div></div><div class="kpi-value">${pendingAssignments}</div></div>
+    </div>
+
+    <div class="grid-main">
+      <div>
+        <div class="section-title"><h2>Mes cours</h2><a href="#" onclick="event.preventDefault(); navigate('courses')">Voir tout →</a></div>
+        <div class="grid-2">
+          ${participantCourses.map(item => `
+            <div class="card">
+              <div class="card-title">${icon("book", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
+              <div class="settings-note">Progression actuelle : <strong>${item.progress}%</strong></div>
+              <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin:12px 0 14px;"><div class="progress-bar-fill" style="width:${item.progress}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
+              <button class="btn btn-secondary btn-sm" onclick="navigate('assignments')">${icon("upload", 13)} Voir mes remises</button>
+            </div>
+          `).join("") || trainerEmptyState("Aucun cours", "Aucune formation n'est actuellement liée à votre compte.")}
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3 class="card-title">${icon("clock", 18)} Prochaine étape</h3>
+          ${nextCourse ? `
+            <div class="activity-item">
+              <span class="activity-dot"></span>
+              <div class="activity-content">
+                <div><strong>${escapeHTML(nextCourse.course.title)}</strong></div>
+                <div class="activity-time">${fmtDate(nextCourse.enrollment.enrollmentDate)} • Démarrer par le premier module disponible</div>
+              </div>
+            </div>
+          ` : trainerEmptyState("Rien à afficher", "Votre tableau de bord se remplira dès votre première inscription.")}
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <h3 class="card-title">${icon("award", 18)} Certificats</h3>
+          ${certificates.filter(cert => cert.userId === uid).map(cert => {
+            const course = getCourse(cert.courseId);
+            return `
+              <div class="activity-item">
+                <span class="activity-dot"></span>
+                <div class="activity-content">
+                  <div><strong>${course ? escapeHTML(course.title) : "Certificat"}</strong></div>
+                  <div class="activity-time">${fmtDate(cert.issueDate)}</div>
+                </div>
+              </div>
+            `;
+          }).join("") || trainerEmptyState("Aucun certificat", "Vos certificats apparaîtront ici une fois vos parcours terminés.")}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderParticipantCourses(uid) {
+  const participantCourses = getParticipantCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Apprenant</span><span>Mes cours</span></div>
+    <div class="page-header"><div><h1 class="page-title">Mes cours</h1><p class="page-subtitle">Vos formations actives et votre progression détaillée.</p></div></div>
+    <div class="grid-2">
+      ${participantCourses.map(item => `
+        <div class="card">
+          <div class="card-title">${icon("book", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
+          <div class="settings-note">Inscrit le ${fmtDate(item.enrollment.enrollmentDate)} • Paiement ${item.enrollment.paymentStatus === "paid" ? "validé" : "en attente"}</div>
+          <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden; margin:12px 0 14px;"><div class="progress-bar-fill" style="width:${item.progress}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
+          <button class="btn btn-secondary btn-sm" onclick="navigate('calendar')">${icon("calendar", 13)} Calendrier</button>
+        </div>
+      `).join("") || trainerEmptyState("Aucun cours", "Aucune formation active n'est encore disponible.")}
+    </div>
+  `;
+}
+
+function renderParticipantAssignments(uid) {
+  const items = submissions.filter(sub => sub.userId === uid);
+  return `
+    <div class="breadcrumb"><span>Espace Apprenant</span><span>Remises</span></div>
+    <div class="page-header"><div><h1 class="page-title">Mes remises</h1><p class="page-subtitle">Vos devoirs déposés et leur statut.</p></div></div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Remise</th><th>Formation</th><th>Type</th><th>Statut</th></tr></thead>
+        <tbody>
+          ${items.map(item => {
+            const course = getCourse(item.courseId);
+            return `
+              <tr>
+                <td><strong>${escapeHTML(item.title)}</strong></td>
+                <td>${course ? escapeHTML(course.title) : "-"}</td>
+                <td>${item.kind === "devoir" ? "Devoir" : "Document"}</td>
+                <td>${renderStatusBadge(item.status)}</td>
+              </tr>
+            `;
+          }).join("") || `<tr><td colspan="4">${trainerEmptyState("Aucune remise", "Déposez votre premier document pour voir ici son état.")}</td></tr>`}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+function renderParticipantCertificates(uid) {
+  const items = certificates.filter(cert => cert.userId === uid);
+  return `
+    <div class="breadcrumb"><span>Espace Apprenant</span><span>Certificats</span></div>
+    <div class="page-header"><div><h1 class="page-title">Certificats</h1><p class="page-subtitle">Vos attestations et certificats obtenus.</p></div></div>
+    <div class="grid-2">
+      ${items.map(cert => {
+        const course = getCourse(cert.courseId);
+        return `
+          <div class="card">
+            <div class="card-title">${icon("award", 18)} ${course ? escapeHTML(course.title) : "Certificat"}</div>
+            <div class="settings-note">Émis le ${fmtDate(cert.issueDate)}</div>
+          </div>
+        `;
+      }).join("") || trainerEmptyState("Aucun certificat", "Terminez vos formations pour obtenir un certificat.")}
+    </div>
+  `;
+}
+
+function renderParticipantCalendar(uid) {
+  const participantCourses = getParticipantCourses(uid);
+  return `
+    <div class="breadcrumb"><span>Espace Apprenant</span><span>Calendrier</span></div>
+    <div class="page-header"><div><h1 class="page-title">Calendrier</h1><p class="page-subtitle">Vos prochaines étapes et échéances.</p></div></div>
+    <div class="card">
+      ${participantCourses.map(item => `
+        <div class="activity-item">
+          <span class="activity-dot"></span>
+          <div class="activity-content">
+            <div><strong>${item.course ? escapeHTML(item.course.title) : "-"}</strong></div>
+            <div class="activity-time">Inscription le ${fmtDate(item.enrollment.enrollmentDate)}</div>
+          </div>
+        </div>
+      `).join("") || trainerEmptyState("Aucun événement", "Votre calendrier apparaîtra une fois vos cours ouverts.")}
+    </div>
+  `;
 }
 
 function renderPlaceholderPage(viewName) {
-  const labels = { tracking: "Suivi global", users: "Utilisateurs", catalog: "Catalogue", requests: "Demandes", course_review: "Validation des cours", enrollments: "Inscriptions", groups: "Groupes et accès", payments: "Paiements", certificates: "Certificats", import_export: "Import / Export", activity: "Journal d'activité" };
+  const labels = {
+    tracking: "Suivi global",
+    users: "Utilisateurs",
+    catalog: "Catalogue",
+    requests: "Demandes",
+    course_review: "Validation des cours",
+    enrollments: "Inscriptions",
+    groups: "Groupes et accÃ¨s",
+    payments: "Paiements",
+    certificates: "Certificats",
+    import_export: "Import / Export",
+    activity: "Journal d'activitÃ©"
+  };
   const label = labels[viewName] || "Section";
   return `
     <div class="breadcrumb"><span>Administration</span><span>${label}</span></div>
     <div class="page-header">
-      <div><h1 class="page-title">${label}</h1><p class="page-subtitle">Page en cours de finalisation.</p></div>
+      <div>
+        <h1 class="page-title">${label}</h1>
+        <p class="page-subtitle">Cette vue sera finalisÃ©e dans le mÃªme langage visuel que la maquette.</p>
+      </div>
+      <div class="page-actions">
+        <button class="btn btn-secondary" onclick="navigate('dashboard')">${icon("book", 16)} Tableau de bord</button>
+        <button class="btn btn-primary" onclick="navigate('settings')">${icon("settings", 16)} ParamÃ¨tres</button>
+      </div>
     </div>
-    <div class="empty-state"><div class="empty-icon">${icon("clock", 28)}</div><h3>Bientôt disponible</h3></div>
+    <div class="empty-state">
+      <div class="empty-icon">${icon("clock", 28)}</div>
+      <h3>Page en cours de finalisation</h3>
+      <p>Nous gardons ici la mÃªme direction graphique, avec les mÃªmes cartes, badges et espacements que le reste de l'espace admin.</p>
+    </div>
   `;
 }
 
@@ -1676,9 +2059,9 @@ function renderWorkspacePage(role = getWorkspaceRole(), viewName = "dashboard") 
   const uid = getSessionUserId();
   container.innerHTML = renderer ? renderer(uid) : (
     role === "trainer"
-      ? trainerEmptyState("Page en cours de finalisation", "Cette vue sera complétée prochainement.")
+      ? trainerEmptyState("Page en cours de finalisation", "Cette vue sera complétée dans le même style que le reste de l'espace formateur.")
       : role === "participant"
-        ? trainerEmptyState("Page en cours de finalisation", "Cette vue sera complétée prochainement.")
+        ? trainerEmptyState("Page en cours de finalisation", "Cette vue sera complétée dans le même style que le reste de l'espace apprenant.")
         : renderPlaceholderPage(viewName)
   );
   container.focus({ preventScroll: true });
@@ -1695,10 +2078,6 @@ function renderAdminPage(viewName = "dashboard") {
   currentAdminView = viewName;
   renderWorkspacePage("admin", viewName);
 }
-
-// =============================================================================
-// MODALS & TOASTS
-// =============================================================================
 
 function showModal(title, bodyHTML, footerHTML = "") {
   const modal = document.getElementById("modal");
@@ -1734,6 +2113,13 @@ function showToast(message, type = "info") {
 function navigate(viewName) {
   const role = getWorkspaceRole();
   renderWorkspacePage(role, viewName);
+  const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
+  const trainerViews = ["dashboard", "myteaching", "courses", "calendar", "evaluations", "corrections", "remises", "participants", "tracking", "preview", "submissions", "studio", "import"];
+  const participantViews = ["dashboard", "courses", "assignments", "calendar", "certificates"];
+  const allowed = role === "trainer" ? trainerViews : role === "participant" ? participantViews : adminViews;
+  if (!allowed.includes(viewName)) {
+    showToast("Cette section est en cours de préparation.", "info");
+  }
 }
 
 function openRequest(requestId) {
@@ -1763,58 +2149,9 @@ function openCreateUser() {
   );
 }
 
-async function processRequest(requestId, action = "approve") {
-  const request = enrollmentRequests.find(r => r.id === requestId);
-  if (!request) { showToast("Demande introuvable", "error"); return; }
-
-  const newStatus = action === "approve" ? "approved" : "rejected";
-
-  try {
-    // 1. Mettre à jour le statut de la demande dans Supabase
-    const { error: reqError } = await window.supabaseInstance
-      .from('enrollment_requests')
-      .update({ status: newStatus })
-      .eq('id', requestId);
-
-    if (reqError) throw reqError;
-
-    // 2. Si approuvé → créer l'inscription dans enrollments
-    if (action === "approve") {
-      const { error: enrError } = await window.supabaseInstance
-        .from('enrollments')
-        .insert({ user_id: request.userId, course_id: request.courseId, payment_status: "paid" });
-
-      // on ignore le conflit si l'inscription existe déjà
-      if (enrError && !enrError.message.includes("duplicate")) throw enrError;
-
-      // Mise à jour locale immédiate
-      request.status = "approved";
-      if (!enrollments.find(e => e.userId === request.userId && e.courseId === request.courseId)) {
-        enrollments.push({
-          id: `enr_live_${Date.now()}`,
-          userId: request.userId,
-          courseId: request.courseId,
-          paymentStatus: "paid",
-          enrollmentDate: new Date().toISOString().split("T")[0]
-        });
-      }
-
-      showToast("Demande approuvée — participant inscrit ✓", "success");
-    } else {
-      request.status = "rejected";
-      showToast("Demande rejetée.", "info");
-    }
-
-    closeModal();
-
-    // Re-rendu pour refléter les changements
-    const role = getWorkspaceRole();
-    renderWorkspacePage(role, currentWorkspaceView || "requests");
-
-  } catch (err) {
-    console.error("processRequest:", err);
-    showToast("Erreur lors du traitement : " + err.message, "error");
-  }
+function processRequest(requestId) {
+  showToast(`Demande ${requestId} approuvée`, "success");
+  closeModal();
 }
 
 function saveSettings() {
@@ -1845,48 +2182,15 @@ function resetSettings() {
   showToast("Paramètres réinitialisés.", "info");
 }
 
-function clearLMSStorage() {
-  localStorage.removeItem(ADMIN_SETTINGS_STORAGE_KEY);
-}
-
-// =============================================================================
-// SYNC TOPBAR (Supabase → nom réel)
-// =============================================================================
-
-async function syncUserChip() {
-  try {
-    if (!window.supabaseInstance) return;
-    const { data: { session } } = await window.supabaseInstance.auth.getSession();
-    if (!session?.user) return;
-
-    const { data: profile } = await window.supabaseInstance
-      .from('profiles')
-      .select('first_name, last_name')
-      .eq('id', session.user.id)
-      .single();
-
-    const fName = profile?.first_name || session.user.user_metadata?.first_name || "";
-    const lName = profile?.last_name || session.user.user_metadata?.last_name || "";
-    const fullName = `${fName} ${lName}`.trim();
-
-    const nameEl = document.querySelector(".user-chip .user-name");
-    const avatarEl = document.querySelector(".user-chip .avatar");
-    if (nameEl && fullName) nameEl.textContent = fullName;
-    if (avatarEl && fName && lName) avatarEl.textContent = `${fName.charAt(0)}${lName.charAt(0)}`.toUpperCase();
-  } catch (err) {
-    console.warn("syncUserChip:", err.message);
-  }
-}
-
-// =============================================================================
-// INIT
-// =============================================================================
-
 document.addEventListener("click", event => {
   const navItem = event.target.closest(".nav-item");
   if (!navItem || !navItem.dataset.view) return;
   event.preventDefault();
   navigate(navItem.dataset.view);
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderWorkspacePage(getWorkspaceRole(), "dashboard");
 });
 
 document.addEventListener("keydown", event => {
