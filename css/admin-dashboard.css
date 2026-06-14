@@ -138,50 +138,39 @@ a {
   position: relative;
   display: flex;
   align-items: center;
-  gap: 12px;           /* Espace parfait entre l'icône SVG et le texte */
   min-height: 44px;
   padding: 10px 14px;
   border-radius: 12px;
   color: var(--text-soft);
   font-size: 14px;
   font-weight: 600;
-  text-decoration: none; /* Évite les soulignements indésirables sur les liens */
   transition: background .18s ease, color .18s ease, transform .18s ease;
 }
 
-/* Gestion de l'icône SVG à l'intérieur du lien */
-.nav-item svg {
-  flex-shrink: 0;       /* Empêche l'icône de se déformer si le texte prend de la place */
-  stroke: currentColor; /* Force l'icône à prendre la même couleur que le texte (var(--text-soft)) */
-  transition: stroke .18s ease;
-}
-
-/* État : Survol (Hover) */
 .nav-item:hover {
   background: var(--blue-50);
-  color: var(--primary); /* Le texte ET l'icône passent au bleu primaire */
-  transform: translateX(4px); /* Légèrement augmenté (4px au lieu de 1px) pour un effet de glissement plus visible et pro */
+  color: var(--primary);
+  transform: translateX(1px);
 }
 
-/* État : Actif (Sélectionné) */
 .nav-item.active,
 .nav-item[aria-current="page"] {
-  background: linear-gradient(135deg, rgba(200, 16, 46, .08), rgba(10, 64, 112, .08));
-  color: var(--primary); /* Le texte ET l'icône passent au bleu primaire */
+  background: linear-gradient(135deg, rgba(200, 16, 46, .12), rgba(10, 64, 112, .12));
+  color: var(--primary);
 }
 
-/* Petite barre d'accentuation à gauche de l'élément actif */
 .nav-item.active::before,
 .nav-item[aria-current="page"]::before {
   content: "";
   position: absolute;
-  left: 0;             /* Ajusté à 0 au lieu de -8px pour s'aligner pile sur le bord intérieur du menu */
-  top: 10px;
-  bottom: 10px;
-  width: 4px;          /* Légèrement épaissi pour une meilleure visibilité */
-  border-radius: 0 4px 4px 0; /* Arrondi élégant uniquement vers l'intérieur */
-  background: var(--accent);  /* Votre couleur rouge accent */
+  left: -8px;
+  top: 9px;
+  bottom: 9px;
+  width: 3px;
+  border-radius: 999px;
+  background: var(--accent);
 }
+
 .main-shell {
   min-width: 0;
   display: flex;
