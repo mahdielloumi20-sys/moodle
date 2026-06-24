@@ -26,9 +26,29 @@ window.getSupabaseUrl = function getSupabaseUrl(path) {
   return `${url}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
+window.initSupabaseClient = function initSupabaseClient() {
+  if (window.supabaseInstance) return window.supabaseInstance;
+  if (!window.supabase?.createClient) {
+    console.warn("SDK Supabase non charge.");
+    return null;
+  }
+
+  const { url, key } = window.getSupabaseConfig();
+  window.supabaseInstance = window.supabase.createClient(url, key, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+      detectSessionInUrl: true
+    }
+  });
+
+  return window.supabaseInstance;
+};
+
 document.addEventListener("DOMContentLoaded", () => {
   try {
     window.getSupabaseConfig();
+    window.initSupabaseClient();
   } catch (error) {
     console.warn(error.message);
   }

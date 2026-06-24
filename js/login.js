@@ -1,12 +1,15 @@
 const DEMO_ACCOUNTS = {
   participant: {
-    email: "participant@example.com"
+    email: "mahdielloumi12@gmail.com",
+    password: "mahdi123"
   },
   trainer: {
-    email: "trainer@example.com"
+    email: "mahdielloumi20@gmail.com",
+    password: "mahdi123"
   },
   admin: {
-    email: "admin@example.com"
+    email: "fkiyoussef8@gmail.com",
+    password: "youssef123"
   }
 };
 
@@ -18,10 +21,10 @@ function fillDemoAccount(role) {
   const passwordInput = document.getElementById("loginPassword");
 
   emailInput.value = account.email;
-  passwordInput.value = "";
+  passwordInput.value = account.password;
   passwordInput.focus();
 
-  showToast(`Compte ${role} prêt. Saisis le mot de passe créé dans Supabase.`, "info");
+  showToast(`Compte ${role} pret a utiliser.`, "info");
 }
 
 async function handleLogin() {
@@ -39,7 +42,7 @@ async function handleLogin() {
       window.location.href = result.redirectTo;
     }, 450);
   } catch (error) {
-    const message = error?.message || "La connexion a échoué.";
+    const message = error?.message || "La connexion a echoue.";
     showToast(message, "danger");
     passwordInput.focus();
   }
@@ -59,5 +62,5 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordInput = document.getElementById("loginPassword");
 
   emailInput.value = DEMO_ACCOUNTS.participant.email;
-  passwordInput.value = "";
+  passwordInput.value = DEMO_ACCOUNTS.participant.password;
 });

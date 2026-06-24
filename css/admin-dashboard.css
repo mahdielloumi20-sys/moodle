@@ -207,6 +207,49 @@ a {
   color: var(--primary);
 }
 
+.topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.role-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-2);
+}
+
+.role-switcher-btn {
+  min-height: 34px;
+  padding: 7px 14px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  transition: background .18s ease, color .18s ease, box-shadow .18s ease;
+}
+
+.role-switcher-btn:hover {
+  background: var(--blue-50);
+  color: var(--primary);
+}
+
+.role-switcher-btn.active,
+.role-switcher-btn[aria-current="page"] {
+  background: var(--primary);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(10, 64, 112, .18);
+}
+
 .user-chip {
   display: inline-flex;
   align-items: center;
@@ -219,6 +262,14 @@ a {
   font-size: 13px;
   font-weight: 600;
   box-shadow: var(--shadow-xs);
+}
+
+body.dashboard-only .app-shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body.dashboard-only .sidebar {
+  display: none;
 }
 
 .avatar {

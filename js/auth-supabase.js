@@ -65,7 +65,9 @@ window.signInWithSupabase = async function signInWithSupabase(email, password) {
         email: cleanEmail,
         password: cleanPassword
       })
+      
     });
+   
   } catch (error) {
     if (error?.status === 400 || error?.status === 401) {
       throw new Error("Identifiants invalides ou compte non confirmé.");
@@ -95,16 +97,21 @@ window.signInWithSupabase = async function signInWithSupabase(email, password) {
       }
     );
     profile = Array.isArray(profileData) ? profileData[0] : null;
-  } catch {
+  } catch (error) {
     const fallbackRole = normalizeWorkspaceRole(
       authUser.user_metadata?.role || authUser.app_metadata?.role
     );
+
+    if (!fallbackRole) {
+      throw new Error("Connexion reussie, mais le profil utilisateur est inaccessible. Verifie les policies RLS de public.profiles.");
+    }
+
     profile = {
       id: authUser.id,
       email: authUser.email,
       first_name: authUser.user_metadata?.first_name || "",
       last_name: authUser.user_metadata?.last_name || "",
-      role: fallbackRole || "participant"
+      role: fallbackRole
     };
   }
 
@@ -114,10 +121,18 @@ window.signInWithSupabase = async function signInWithSupabase(email, password) {
 
   sessionStorage.setItem("iccaCurrentUserId", authUser.id);
   sessionStorage.setItem("iccaCurrentUserRole", role);
+  sessionStorage.setItem("iccaAuthenticatedUserRole", role);
   sessionStorage.setItem("iccaCurrentUserEmail", authUser.email || cleanEmail);
   sessionStorage.setItem("iccaCurrentUserName", displayName);
   sessionStorage.setItem("iccaAccessToken", accessToken);
   sessionStorage.setItem("iccaRefreshToken", authData.refresh_token || "");
+
+  if (window.supabaseInstance?.auth?.setSession && authData.refresh_token) {
+    await window.supabaseInstance.auth.setSession({
+      access_token: accessToken,
+      refresh_token: authData.refresh_token
+    });
+  }
 
   return {
     user: authUser,

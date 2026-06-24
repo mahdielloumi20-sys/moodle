@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", async () => {
-  // 1. Vérifier si on a une session via le sessionStorage
+  // 1. Vérifier si on a une session via le sessionStorage (connexion via auth-supabase.js)
   const hasCustomSession = !!sessionStorage.getItem("iccaAccessToken");
 
   // 2. Vérifier si on a une session via le SDK Supabase (secours)
@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 4. Vérifier le rôle réel UNIQUEMENT si iccaAuthenticatedUserRole est absent
   //    On utilise iccaCurrentUserId (écrit à la connexion) — jamais session.user.id
-  //    car le SDK peut garder la session d'un autre utilisateur
+  //    car le SDK peut garder la session d'un autre utilisateur (ex: Mahdi Feki)
   const storedUserId = sessionStorage.getItem("iccaCurrentUserId");
   const alreadyHasRole = !!sessionStorage.getItem("iccaAuthenticatedUserRole");
 
@@ -33,14 +33,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         sessionStorage.setItem("iccaAuthenticatedUserRole", profile.role);
       }
     } catch (e) {
-      console.warn("[trainer-dashboard] Impossible de vérifier le rôle Supabase :", e.message);
+      console.warn("[admin-dashboard] Impossible de vérifier le rôle Supabase :", e.message);
     }
   }
 
   // 5. Redirection basée UNIQUEMENT sur iccaAuthenticatedUserRole
   const actualRole = sessionStorage.getItem("iccaAuthenticatedUserRole");
-  if (actualRole === "admin") {
-    window.location.replace("../html/admin-dashboard.html");
+  if (actualRole === "trainer") {
+    window.location.replace("../html/trainer-dashboard.html");
     return;
   }
   if (actualRole === "participant") {
@@ -49,9 +49,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Remettre iccaCurrentUserRole en cohérence
-  sessionStorage.setItem("iccaCurrentUserRole", "trainer");
+  sessionStorage.setItem("iccaCurrentUserRole", "admin");
 
   if (typeof renderWorkspacePage === "function") {
-    renderWorkspacePage("trainer", "dashboard");
+    renderWorkspacePage("admin", "dashboard");
   }
 });

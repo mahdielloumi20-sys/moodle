@@ -21,6 +21,10 @@ for select
 to authenticated
 using (auth.uid() = id);
 
+drop policy if exists "admins_read_all_profiles" on public.profiles;
+drop policy if exists "profiles_select_admin" on public.profiles;
+drop function if exists public.current_user_is_admin();
+
 drop policy if exists "profiles_update_own" on public.profiles;
 create policy "profiles_update_own"
 on public.profiles
@@ -63,6 +67,41 @@ for each row execute procedure public.handle_new_user();
 
 grant usage on schema public to authenticated;
 grant select, update on public.profiles to authenticated;
+
+create or replace function public.admin_list_profiles()
+returns table (
+  id uuid,
+  email text,
+  first_name text,
+  last_name text,
+  role text
+)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  caller_role text;
+begin
+  select p.role
+  into caller_role
+  from public.profiles p
+  where p.id = auth.uid();
+
+  if caller_role <> 'admin' then
+    raise exception 'Admin role required';
+  end if;
+
+  return query
+  select p.id, p.email, p.first_name, p.last_name, p.role
+  from public.profiles p
+  order by p.created_at desc;
+end;
+$$;
+
+revoke all on function public.admin_list_profiles() from public;
+grant execute on function public.admin_list_profiles() to authenticated;
 
 comment on table public.profiles is 'Profile LMS lié à auth.users. Le rôle contrôle la redirection après login.';
 comment on column public.profiles.role is 'Valeurs autorisées: admin, trainer, participant.';
