@@ -971,3 +971,94 @@ textarea:focus {
     max-height: calc(100vh - 32px);
   }
 }
+
+
+/* --- CORRECTION MAJEURE : DROPDOWN USER CHIP --- */
+
+/* Force la topbar à laisser déborder le menu absolu */
+.topbar {
+  overflow: visible !important;
+}
+
+.user-chip {
+  position: relative !important;
+  cursor: pointer;
+  user-select: none;
+  overflow: visible !important;
+}
+
+/* Le petit chevron */
+.user-chip-chevron {
+  font-size: 9px;
+  opacity: 0.6;
+  margin-left: 2px;
+  transition: transform 0.2s ease;
+}
+
+/* Rotation du chevron */
+.user-chip.active .user-chip-chevron {
+  transform: rotate(180deg);
+}
+
+/* La boîte du menu alignée sur ton design */
+.user-chip-dropdown {
+  position: absolute !important;
+  top: calc(100% + 8px) !important;
+  right: 0 !important;
+  background: #ffffff !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--radius-md) !important;
+  box-shadow: var(--shadow-md) !important;
+  min-width: 185px !important;
+  padding: 6px 0 !important;
+  z-index: 99999 !important;
+  
+  /* Masqué par défaut */
+  display: none !important;
+  flex-direction: column;
+}
+
+/* Affichage quand le chip est actif */
+.user-chip.active .user-chip-dropdown {
+  display: flex !important;
+}
+
+/* Liens et boutons du menu */
+.dropdown-item {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 10px 16px !important;
+  color: var(--text-soft) !important;
+  text-decoration: none !important;
+  font-size: 13.5px !important;
+  font-family: var(--font-body) !important;
+  border: none !important;
+  background: none !important;
+  width: 100% !important;
+  text-align: left !important;
+  cursor: pointer !important;
+  transition: background .18s ease, color .18s ease !important;
+}
+
+.dropdown-item:hover {
+  background: var(--blue-50) !important;
+  color: var(--primary) !important;
+}
+
+.dropdown-icon {
+  font-size: 16px !important;
+}
+
+/* Bouton Déconnexion calé sur ton rouge `--danger` */
+.dropdown-item.logout-item {
+  color: var(--danger-500) !important;
+  border-top: 1px solid var(--border) !important;
+  margin-top: 4px !important;
+  padding-top: 12px !important;
+}
+
+.dropdown-item.logout-item:hover {
+  background: var(--danger-100) !important;
+  color: var(--danger-700) !important;
+}

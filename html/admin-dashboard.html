@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
   <meta name="description" content="Espace de gestion IC Canada Academy LMS">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../css/admin-dashboard.css">
 </head>
+
 <body>
   <div class="app-shell">
     <aside class="sidebar" aria-label="Navigation administration">
@@ -23,7 +27,8 @@
 
       <div class="sidebar-section-title">Espace</div>
       <nav class="nav-list">
-        <a class="nav-item active" href="javascript:void(0)" aria-current="page" data-view="dashboard">Tableau de bord</a>
+        <a class="nav-item active" href="javascript:void(0)" aria-current="page" data-view="dashboard">Tableau de
+          bord</a>
         <a class="nav-item" href="javascript:void(0)" data-view="tracking">Suivi global</a>
         <a class="nav-item" href="javascript:void(0)" data-view="users">Utilisateurs</a>
         <a class="nav-item" href="javascript:void(0)" data-view="catalog">Catalogue</a>
@@ -38,9 +43,20 @@
           <div class="topbar-kicker">Espace LMS</div>
           <div class="topbar-title">Programme Jeunes Talents</div>
         </div>
+        <!-- REMPLACE L'ANCIEN USER-CHIP PAR CELUI-CI -->
         <div class="user-chip" aria-label="Administrateur connecté">
-          <span class="avatar">KK</span>
-          <span>Karim Karray</span>
+          <span class="avatar">IC</span>
+          <span class="user-name">Chargement...</span>
+          <span class="user-chip-chevron">▼</span>
+
+          <div class="user-chip-dropdown">
+            <a href="profile.html" class="dropdown-item">
+              <span class="dropdown-icon">👤</span> Mon Profil
+            </a>
+            <button id="logout-btn" class="dropdown-item logout-item" type="button">
+              <span class="dropdown-icon">🚪</span> Déconnexion
+            </button>
+          </div>
         </div>
       </header>
 
@@ -59,5 +75,5 @@
   <script src="../js/dashboard.js"></script>
   <script src="../js/admin-dashboard.js"></script>
 </body>
-</html>
 
+</html>
