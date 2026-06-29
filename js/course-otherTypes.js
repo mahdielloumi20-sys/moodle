@@ -68,14 +68,30 @@ function openAddModuleModal(formationId, type) {
   );
 }
 
-function confirmAddOtherModule() {
-  const formationId = window._pendingOtherFormationId;
+// Fonction utilitaire rapide pour vérifier si une chaîne est un vrai UUID
+function isValidUUID(str) {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return regex.test(str);
+}
+
+async function confirmAddOtherModule() {
+  const formationId = window._pendingOtherFormationId; 
   const type        = window._pendingOtherModuleType;
 
   const title   = (document.getElementById("mod_title")?.value || "").trim();
   const desc    = (document.getElementById("mod_desc")?.value || "").trim();
   const fileInput = document.getElementById("mod_file");
   const errorEl = document.getElementById("mod_error");
+
+  // 🛡️ SÉCURITÉ : Vérification du format de l'ID avant de requêter Supabase
+  if (!formationId || !isValidUUID(formationId)) {
+    console.error("[Validation Error] L'ID parent n'est pas un UUID valide :", formationId);
+    if (errorEl) {
+      errorEl.textContent = `Impossible d'ajouter le module : l'ID de la section ("${formationId}") est temporaire. Veuillez d'abord enregistrer ou sélectionner une vraie section.`;
+      errorEl.style.display = "block";
+    }
+    return;
+  }
 
   if (!title) {
     if (errorEl) { errorEl.textContent = "Le titre est obligatoire."; errorEl.style.display = "block"; }
@@ -89,43 +105,76 @@ function confirmAddOtherModule() {
   }
 
   const file = fileInput.files[0];
-  const reader = new FileReader();
 
-  if (type === "text" && (file.name.endsWith(".txt") || file.name.endsWith(".html") || file.name.endsWith(".md"))) {
-    reader.readAsText(file);
-  } else {
-    reader.readAsDataURL(file);
-  }
+  try {
+    showToast("Téléchargement du fichier vers Supabase Storage...", "info");
 
-  reader.onload = function (e) {
-    const fileContentData = e.target.result;
+    const fileExt = file.name.split('.').pop();
+    const uniquePath = `${formationId}/${crypto.randomUUID()}.${fileExt}`;
+
+    const { data: storageData, error: storageError } = await window.supabaseInstance
+      .storage
+      .from('course-attachments')
+      .upload(uniquePath, file, { cacheControl: '3600', upsert: true });
+
+    if (storageError) throw storageError;
+
+    const { data: { publicUrl } } = window.supabaseInstance
+      .storage
+      .from('course-attachments')
+      .getPublicUrl(uniquePath);
+
+    showToast("Enregistrement du module dans la base de données...", "info");
+
+    const { data: insertedRows, error: dbError } = await window.supabaseInstance
+      .from("course_contents")
+      .insert([
+        {
+          section_id: formationId, 
+          title: title,
+          content_type: type,     
+          content: publicUrl,     
+          description: desc || null 
+        }
+      ])
+      .select();
+
+    if (dbError) throw dbError;
+
+    console.log("[Supabase] Nouveau module inséré avec succès :", insertedRows);
 
     const newModule = {
-      id: `mod_${type}_${Date.now()}`,
+      id: insertedRows[0].id, 
       type: type,
       title,
-      desc,
+      desc: desc || null, 
       fileName: file.name,
       fileSize: (file.size / 1024).toFixed(1) + " KB",
-      fileData: fileContentData,
+      fileUrl: publicUrl,
       addedAt: new Date().toISOString()
     };
 
-    const existing = loadFormationModules(formationId);
-    existing.push(newModule);
-    saveFormationModules(formationId, existing);
+    if (typeof loadFormationModules === 'function' && typeof saveFormationModules === 'function') {
+      const existing = loadFormationModules(formationId);
+      existing.push(newModule);
+      saveFormationModules(formationId, existing);
+    }
 
     closeModal();
-    showToast(`Le fichier "${file.name}" a été importé avec succès.`, "success");
+    showToast(`Le module "${title}" a été enregistré avec succès.`, "success");
 
-    renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), "preview");
-  };
+    if (typeof renderWorkspacePage === 'function') {
+      renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), "preview");
+    }
 
-  reader.onerror = function () {
-    if (errorEl) { errorEl.textContent = "Erreur lors de la lecture du fichier informatique."; errorEl.style.display = "block"; }
-  };
+  } catch (err) {
+    console.error("[Supabase Error]", err.message);
+    if (errorEl) {
+      errorEl.textContent = `Erreur lors de l'enregistrement : ${err.message}`;
+      errorEl.style.display = "block";
+    }
+  }
 }
-
 // ─── Étape 2 : Mode Grand Format avec Défilement de la Page Restauré ──────────
 
 function previewGenericModule(formationId, moduleId) {

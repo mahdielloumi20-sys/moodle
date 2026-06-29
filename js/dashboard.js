@@ -359,215 +359,209 @@ async function syncSupabaseData() {
       session = sessionResult.data?.session || null;
     }
 
-    // ⚠️ Priorité absolue à iccaCurrentUserId (écrit par auth-supabase.js après vérification du profil).
-    // session.user.id peut être périmé si le SDK Supabase garde la session d'un utilisateur précédent.
     const currentUserId = sessionStorage.getItem("iccaCurrentUserId") || session?.user?.id;
     if (!currentUserId) return;
 
-    // --- Profils (utilisateurs) ---
-    let { data: profilesData } = await window.supabaseInstance
-      .from('profiles')
-      .select('id, email, first_name, last_name, role');
+    // --- 1. PROFILS (UTILISATEURS) ---
+    let profilesData = [];
+    try {
+      let { data } = await window.supabaseInstance
+        .from('profiles')
+        .select('id, email, first_name, last_name, role');
+      profilesData = data || [];
 
-    const storedRole = sessionStorage.getItem("iccaAuthenticatedUserRole") || sessionStorage.getItem("iccaCurrentUserRole");
-    if (storedRole === "admin" && (!profilesData || profilesData.length <= 1)) {
-      const { data: adminProfilesData, error: adminProfilesError } = await window.supabaseInstance
-        .rpc("admin_list_profiles");
-
-      if (!adminProfilesError && adminProfilesData) {
-        profilesData = adminProfilesData;
+      const storedRole = sessionStorage.getItem("iccaAuthenticatedUserRole") || sessionStorage.getItem("iccaCurrentUserRole");
+      if (storedRole === "admin" && profilesData.length <= 1) {
+        const { data: adminProfilesData, error: adminProfilesError } = await window.supabaseInstance.rpc("admin_list_profiles");
+        if (!adminProfilesError && adminProfilesData) profilesData = adminProfilesData;
       }
-    }
 
-    if (profilesData && profilesData.length > 0) {
-      users = profilesData.map(p => ({
-        id: p.id,
-        firstName: p.first_name || "",
-        lastName: p.last_name || "",
-        role: p.role || "participant",
-        email: p.email || "",
-        avatar: ((p.first_name?.[0] || "") + (p.last_name?.[0] || "")).toUpperCase() || ""
-      }));
-    }
+      if (profilesData.length > 0) {
+        users = profilesData.map(p => ({
+          id: p.id,
+          firstName: p.first_name || "",
+          lastName: p.last_name || "",
+          role: p.role || "participant",
+          email: p.email || "",
+          avatar: ((p.first_name?.[0] || "") + (p.last_name?.[0] || "")).toUpperCase() || ""
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des profils:", e.message); }
 
-    // --- Formations ---
-    const { data: coursesData } = await window.supabaseInstance
-      .from('courses')
-      .select('id, title, status, trainer_id');
-    if (coursesData && coursesData.length > 0) {
-      courses = coursesData.map(c => ({
-        id: c.id,
-        title: c.title || "Sans titre",
-        status: c.status || "draft",
-        trainerId: c.trainer_id || null
-      }));
-    }
-    // Les cours importés localement (ZIP, mode démo) ne sont pas encore dans
-    // le schéma Supabase complet : on les remet dans la liste s'ils manquent.
+    // --- 2. FORMATIONS (AVEC CONTENUS COMPLETS) ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('courses')
+        .select('id, title, status, trainer_id, description, category, duration, level, price, modules, quiz, resources');
+      
+      if (data && data.length > 0) {
+        courses = data.map(c => ({
+          id: c.id,
+          title: c.title || "Sans titre",
+          status: c.status || "draft",
+          trainerId: c.trainer_id || null,
+          description: c.description || "",
+          category: c.category || "Général",
+          duration: c.duration || "-",
+          level: c.level || "Tous niveaux",
+          price: Number(c.price) || 0,
+          modules: c.modules || [],       // Tableau de modules (titres, sources, id youtube...)
+          quiz: c.quiz || [],             // Quiz associés
+          resources: c.resources || [],   // Documents téléchargeables
+          resourceCount: (c.resources || []).length
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des cours:", e.message); }
     loadImportedCoursesFromStorage();
 
-    // --- Inscriptions ---
-    const { data: enrollmentsData } = await window.supabaseInstance
-      .from('enrollments')
-      .select('id, user_id, course_id, payment_status, enrolled_at');
-    if (enrollmentsData && enrollmentsData.length > 0) {
-      enrollments = enrollmentsData.map(e => ({
-        id: e.id,
-        userId: e.user_id,
-        courseId: e.course_id,
-        paymentStatus: e.payment_status || "pending",
-        enrollmentDate: e.enrolled_at ? e.enrolled_at.split("T")[0] : ""
-      }));
-    }
+    // --- 3. INSCRIPTIONS ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('enrollments')
+        .select('id, user_id, course_id, payment_status, enrolled_at');
+      if (data && data.length > 0) {
+        enrollments = data.map(e => ({
+          id: e.id,
+          userId: e.user_id,
+          courseId: e.course_id,
+          paymentStatus: e.payment_status || "pending",
+          enrollmentDate: e.enrolled_at ? e.enrolled_at.split("T")[0] : ""
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des inscriptions:", e.message); }
 
-    // --- Sessions / Calendrier ---
-    const { data: sessionsData } = await window.supabaseInstance
-      .from('sessions')
-      .select('id, course_id, title, starts_at, type')
-      .order('starts_at', { ascending: true });
-    if (sessionsData && sessionsData.length > 0) {
-      trainerSessions = sessionsData.map(s => ({
-        id: s.id,
-        courseId: s.course_id,
-        title: s.title,
-        startsAt: s.starts_at,
-        type: s.type || "zoom"
-      }));
-    }
+    // --- 4. SESSIONS / CALENDRIER ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('sessions')
+        .select('id, course_id, title, starts_at, type')
+        .order('starts_at', { ascending: true });
+      if (data && data.length > 0) {
+        trainerSessions = data.map(s => ({
+          id: s.id,
+          courseId: s.course_id,
+          title: s.title,
+          startsAt: s.starts_at,
+          type: s.type || "zoom"
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des séances:", e.message); }
 
-    // --- Évaluations ---
-    const { data: evaluationsData } = await window.supabaseInstance
-      .from('evaluations')
-      .select('id, course_id, title, kind, status');
-    if (evaluationsData && evaluationsData.length > 0) {
-      trainerEvaluations = evaluationsData.map(e => ({
-        id: e.id,
-        courseId: e.course_id,
-        title: e.title,
-        kind: e.kind || "quiz",
-        status: e.status || "draft"
-      }));
-    }
+    // --- 5. ÉVALUATIONS ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('evaluations')
+        .select('id, course_id, title, kind, status');
+      if (data && data.length > 0) {
+        trainerEvaluations = data.map(e => ({
+          id: e.id,
+          courseId: e.course_id,
+          title: e.title,
+          kind: e.kind || "quiz",
+          status: e.status || "draft"
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des évaluations:", e.message); }
 
-    // --- Soumissions ---
-    const { data: submissionsData } = await window.supabaseInstance
-      .from('submissions')
-      .select('id, user_id, course_id, title, kind, status, submitted_at');
-    if (submissionsData && submissionsData.length > 0) {
-      trainerSubmissions = submissionsData.map(s => ({
-        id: s.id,
-        userId: s.user_id,
-        courseId: s.course_id,
-        title: s.title,
-        kind: s.kind || "devoir",
-        status: s.status || "submitted",
-        submittedAt: s.submitted_at || ""
-      }));
-      submissions = trainerSubmissions;
-    }
+    // --- 6. SOUMISSIONS ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('submissions')
+        .select('id, user_id, course_id, title, kind, status, submitted_at');
+      if (data && data.length > 0) {
+        trainerSubmissions = data.map(s => ({
+          id: s.id,
+          userId: s.user_id,
+          courseId: s.course_id,
+          title: s.title,
+          kind: s.kind || "devoir",
+          status: s.status || "submitted",
+          submittedAt: s.submitted_at || ""
+        }));
+        submissions = trainerSubmissions;
+      }
+    } catch (e) { console.warn("Échec du chargement des soumissions:", e.message); }
 
-    // --- Certificats ---
-    const { data: certsData } = await window.supabaseInstance
-      .from('certificates')
-      .select('id, user_id, course_id, issued_at');
-    if (certsData && certsData.length > 0) {
-      certificates = certsData.map(c => ({
-        id: c.id,
-        userId: c.user_id,
-        courseId: c.course_id,
-        issueDate: c.issued_at ? c.issued_at.split("T")[0] : ""
-      }));
-    }
+    // --- 7. CERTIFICATS ---
+    try {
+      const { data } = await window.supabaseInstance
+        .from('certificates')
+        .select('id, user_id, course_id, issued_at');
+      if (data && data.length > 0) {
+        certificates = data.map(c => ({
+          id: c.id,
+          userId: c.user_id,
+          courseId: c.course_id,
+          issueDate: c.issued_at ? c.issued_at.split("T")[0] : ""
+        }));
+      }
+    } catch (e) { console.warn("Échec du chargement des certificats:", e.message); }
 
-    // --- Demandes d'inscription ---
-    const { data: requestsData } = await window.supabaseInstance
-      .from('enrollment_requests')
-      .select('id, user_id, course_id, status, requested_at');
-    if (requestsData && requestsData.length > 0) {
-      // Supabase a des données → on les utilise comme source principale
-      // APRÈS
-enrollmentRequests = requestsData.map(r => {
-  const profile = (profilesData || []).find(p => p.id === r.user_id);
-  const participantName = (profile
-    ? [profile.first_name, profile.last_name].filter(v => v && v !== "null").join(" ").trim() || profile.email
-    : "") || r.participant_name || "";
-  return {
-    id: r.id,
-    userId: r.user_id,
-    courseId: r.course_id,
-    status: r.status || "pending",
-    requestedAt: r.requested_at ? r.requested_at.split("T")[0] : "",
-    participantName,
-    participantEmail: profile?.email || ""
-  };
-});
-      // On fusionne avec les demandes locales non encore synchronisées
-      const localRequests = (() => {
-        try { return JSON.parse(localStorage.getItem(REQUESTS_STORAGE_KEY) || "[]"); } catch { return []; }
-      })();
-      localRequests.forEach(lr => {
-        if (!enrollmentRequests.some(sr => sr.id === lr.id)) {
-          enrollmentRequests.push(lr);
-        }
-      });
-      saveRequestsToStorage();
+    // --- 8. DEMANDES D'INSCRIPTION ---
+    try {
+      const { data: requestsData } = await window.supabaseInstance
+        .from('enrollment_requests')
+        .select('id, user_id, course_id, status, requested_at');
+      
+      if (requestsData && requestsData.length > 0) {
+        enrollmentRequests = requestsData.map(r => {
+          const profile = (profilesData || []).find(p => p.id === r.user_id);
+          const participantName = (profile
+            ? [profile.first_name, profile.last_name].filter(v => v && v !== "null").join(" ").trim() || profile.email
+            : "") || r.participant_name || "";
+          return {
+            id: r.id,
+            userId: r.user_id,
+            course_id: r.course_id, // Match structure locale
+            courseId: r.course_id,
+            status: r.status || "pending",
+            requestedAt: r.requested_at ? r.requested_at.split("T")[0] : "",
+            participantName,
+            participantEmail: profile?.email || ""
+          };
+        });
 
-      // Correction rétroactive : remplace "Utilisateur" par le vrai nom
-// pour les demandes déjà sauvegardées avec le fallback générique
-enrollmentRequests = enrollmentRequests.map(req => {
-  if (!req.participantName || req.participantName === "Utilisateur" || req.participantName.startsWith("Utilisateur (") || req.participantName === "null null" || req.participantName.trim() === "null" || req.participantName.trim() === "") {
-    const profile = (profilesData || []).find(p => p.id === req.userId);
-    if (profile) {
-      req.participantName =[profile.first_name, profile.last_name].filter(v => v && v !== "null").join(" ").trim()
-  || profile.email
-  || "Participant"
-    }
-  }
-  return req;
-});
-saveRequestsToStorage(); // re-sauvegarde avec les vrais noms
-    } else {
-      // Pas de données Supabase → on garde ce qui est en localStorage
-      loadRequestsFromStorage();
-    }
+        const localRequests = (() => {
+          try { return JSON.parse(localStorage.getItem(REQUESTS_STORAGE_KEY) || "[]"); } catch { return []; }
+        })();
+        localRequests.forEach(lr => {
+          if (!enrollmentRequests.some(sr => sr.id === lr.id)) enrollmentRequests.push(lr);
+        });
+        saveRequestsToStorage();
 
-    // Synchronise le chip utilisateur dans la topbar
+        enrollmentRequests = enrollmentRequests.map(req => {
+          if (!req.participantName || req.participantName === "Utilisateur" || req.participantName.startsWith("Utilisateur (") || req.participantName === "null null" || req.participantName.trim() === "null" || req.participantName.trim() === "") {
+            const profile = (profilesData || []).find(p => p.id === req.userId);
+            if (profile) {
+              req.participantName = [profile.first_name, profile.last_name].filter(v => v && v !== "null").join(" ").trim() || profile.email || "Participant";
+            }
+          }
+          return req;
+        });
+        saveRequestsToStorage();
+      } else {
+        loadRequestsFromStorage();
+      }
+    } catch (e) { console.warn("Échec de la synchronisation des demandes d'accès:", e.message); }
+
+    // --- FINISH : MISE À JOUR DE L'INTERFACE UI ---
     if (typeof syncUserChip === "function") syncUserChip();
 
-    // Ne pas écraser iccaCurrentUserId : il a été écrit par auth-supabase.js avec le bon userId
-    // sessionStorage.setItem("iccaCurrentUserId", currentUserId); // ← supprimé intentionnellement
-
-
-    // Persiste le prénom/nom/email du user connecté en session
-   // ✅ currentProfile défini EN PREMIER (avant toute utilisation)
     const currentProfile = profilesData?.find(p => p.id === currentUserId);
-
-    // Persiste le prénom/nom/email du user connecté en session
     if (currentProfile) {
       sessionStorage.setItem("iccaCurrentUserFirstName", currentProfile.first_name || "");
       sessionStorage.setItem("iccaCurrentUserLastName", currentProfile.last_name || "");
       sessionStorage.setItem("iccaCurrentUserEmail", currentProfile.email || "");
-      // ⚠️ Ne PAS écraser iccaAuthenticatedUserRole ici : il a déjà été défini par
-      // auth-supabase.js avec le bon rôle du compte connecté. Si on le réécrit depuis
-      // currentProfile, on risque de le remplacer par le rôle d'un autre utilisateur
-      // (ex: si le SDK Supabase avait encore la session d'un compte précédent).
-      // if (currentProfile.role) {
-      //   sessionStorage.setItem("iccaAuthenticatedUserRole", currentProfile.role);
-      // }
     }
 
-   
-    // Re-rendu — on préserve le rôle actuellement affiché (peut être switché)
     renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
 
-    // Affiche les notifications non lues maintenant que les vraies demandes sont chargées
     if (getWorkspaceRole() === "participant") {
       setTimeout(() => showLoginNotifications(currentUserId), 300);
     }
 
   } catch (err) {
-    // Supabase indisponible → les données statiques restent affichées
-    console.warn("[syncSupabaseData] Supabase non disponible, données démo affichées :", err.message);
+    console.error("[syncSupabaseData] Erreur critique inattendue :", err.message);
   }
 }
 
@@ -2449,6 +2443,7 @@ async function confirmTrainerImportFromFilesAuto(fileList, autoTitle) {
     };
 
     courses.push(newCourse);
+    await supabaseSaveCourse(newCourse);
     saveImportedCoursesToStorage();
 
     if (window.supabaseInstance) {
@@ -2565,6 +2560,7 @@ async function confirmTrainerImportFromFiles() {
     };
 
     courses.push(newCourse);
+    await supabaseSaveCourse(newCourse);
     saveImportedCoursesToStorage();
 
     if (window.supabaseInstance) {
@@ -2670,6 +2666,7 @@ async function importCourseFromZipFile(file) {
     };
 
     courses.push(newCourse);
+    await supabaseSaveCourse(newCourse);
     saveImportedCoursesToStorage();
 
     if (window.supabaseInstance) {
@@ -2724,6 +2721,7 @@ async function confirmZipCourseDate() {
   };
 
   courses.push(newCourse);
+  await supabaseSaveCourse(newCourse);
   saveImportedCoursesToStorage();
 
   if (window.supabaseInstance) {
@@ -3446,50 +3444,55 @@ function openRequest(requestId) {
   );
 }
 
-function requestCourseAccess(courseId) {
+async function requestCourseAccess(courseId) {
   const uid = getSessionUserId();
   const existing = enrollmentRequests.find(req => req.userId === uid && req.courseId === courseId);
+  
   if (existing && existing.status === "pending") {
     showToast("Vous avez déjà une demande en attente pour ce cours.", "info");
     return;
   }
-  // Si demande rejetée précédente, on la retire pour en créer une nouvelle
   if (existing && existing.status === "rejected") {
     const idx = enrollmentRequests.indexOf(existing);
     if (idx !== -1) enrollmentRequests.splice(idx, 1);
   }
- // APRÈS — cherche d'abord dans users[] (déjà chargé), sinon fallback email
-const u = getUser(uid); // utilisateur réel depuis Supabase
-const participantName = (u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : "")
-  || sessionStorage.getItem("iccaCurrentUserFirstName") + " " + sessionStorage.getItem("iccaCurrentUserLastName")
-  || sessionStorage.getItem("iccaCurrentUserEmail")
-  || getUserDisplayName(uid);
+
+  const u = getUser(uid);
+  const participantName = (u ? `${u.firstName || ""} ${u.lastName || ""}`.trim() : "")
+    || sessionStorage.getItem("iccaCurrentUserFirstName") + " " + sessionStorage.getItem("iccaCurrentUserLastName")
+    || sessionStorage.getItem("iccaCurrentUserEmail")
+    || getUserDisplayName(uid);
+
   const request = {
     id: `req_${Date.now()}`,
     userId: uid,
     courseId,
     status: "pending",
-    requestedAt: new Date().toISOString().split("T")[0],
+    requestedAt: new Date().toISOString(),
     participantName,
     participantEmail: sessionStorage.getItem("iccaCurrentUserEmail") || ""
   };
-  enrollmentRequests.unshift(request);
-  saveRequestsToStorage();
 
-  // Si Supabase est disponible, persiste aussi côté serveur
+  // Ajout local réactif immédiat
+  enrollmentRequests.unshift(request);
+
   if (window.supabaseInstance) {
-    (async () => {
-      try {
-        await window.supabaseInstance.from('enrollment_requests').insert({
-          user_id: uid,
-          course_id: courseId,
-          status: 'pending',
-          requested_at: new Date().toISOString()
+    try {
+      const { error } = await window.supabaseInstance
+        .from('enrollment_requests')
+        .insert({
+          id: request.id,
+          user_id: request.userId,
+          course_id: request.courseId,
+          status: request.status,
+          requested_at: request.requestedAt,
+          participant_name: request.participantName,
+          participant_email: request.participantEmail
         });
-      } catch (e) {
-        console.warn("[requestCourseAccess] Supabase insert échoué, demande sauvegardée localement.", e.message);
-      }
-    })();
+      if (error) throw error;
+    } catch (e) {
+      console.warn("[Supabase] Échec de l'insertion de la demande.", e.message);
+    }
   }
 
   showToast("Votre demande a bien été envoyée à l'administration.", "success");
@@ -3505,47 +3508,60 @@ function openCreateUser() {
   );
 }
 
-function processRequest(requestId, action = "approve") {
+async function processRequest(requestId, action = "approve") {
   const request = enrollmentRequests.find(item => item.id === requestId);
   if (!request) return;
+
   request.status = action === "reject" ? "rejected" : "approved";
-  if (request.status === "approved" && !enrollments.some(enrollment => enrollment.userId === request.userId && enrollment.courseId === request.courseId)) {
-    enrollments.push({
+
+  let newEnrollment = null;
+  if (request.status === "approved" && !enrollments.some(e => e.userId === request.userId && e.courseId === request.courseId)) {
+    newEnrollment = {
       id: `enr_${Date.now()}`,
       userId: request.userId,
       courseId: request.courseId,
       paymentStatus: "paid",
-      enrollmentDate: new Date().toISOString().split("T")[0]
-    });
+      enrollmentDate: new Date().toISOString().split("T")[0],
+      progress: 0
+    };
+    enrollments.push(newEnrollment);
   }
+
   saveRequestsToStorage();
 
-  // Si Supabase disponible, met à jour le statut côté serveur
   if (window.supabaseInstance) {
-    (async () => {
-      try {
-        await window.supabaseInstance.from('enrollment_requests')
-          .update({ status: request.status })
-          .eq('id', request.id);
-        if (request.status === "approved") {
-          await window.supabaseInstance.from('enrollments').insert({
-            user_id: request.userId,
-            course_id: request.courseId,
-            payment_status: 'paid',
-            enrolled_at: new Date().toISOString()
+    try {
+      // 1. Mettre à jour le statut de la demande
+      const { error: reqError } = await window.supabaseInstance
+        .from('enrollment_requests')
+        .update({ status: request.status })
+        .eq('id', request.id);
+      
+      if (reqError) throw reqError;
+
+      // 2. Si approuvé, insérer l'inscription active
+      if (request.status === "approved" && newEnrollment) {
+        const { error: enrollError } = await window.supabaseInstance
+          .from('enrollments')
+          .insert({
+            id: newEnrollment.id,
+            user_id: newEnrollment.userId,
+            course_id: newEnrollment.courseId,
+            payment_status: newEnrollment.paymentStatus,
+            enrolled_at: new Date().toISOString(),
+            progress: 0
           });
-        }
-      } catch (e) {
-        console.warn("[processRequest] Supabase update échoué, mis à jour localement.", e.message);
+        if (enrollError) throw enrollError;
       }
-    })();
+    } catch (e) {
+      console.error("[Supabase] Erreur lors du traitement de la requête :", e.message);
+    }
   }
 
   showToast(`Demande ${request.status === "approved" ? "approuvée" : "refusée"}`, request.status === "approved" ? "success" : "danger");
   closeModal();
   renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
 }
-
 function saveSettings() {
   const read = id => document.getElementById(id);
   if (read("set_name")) adminSettings.platformName = read("set_name").value.trim() || adminSettings.platformName;
@@ -3658,5 +3674,96 @@ function handleParticipantModuleClick(formationId, moduleId, type, index) {
     } else {
       showToast("Le module de lecture de documents n'est pas chargé.", "error");
     }
+  }
+}
+
+
+// Fonction utilitaire centralisée pour pousser un cours sur Supabase
+async function supabaseSaveCourse(newCourse) {
+  if (!window.supabaseInstance) return;
+
+  // 1. On vérifie si l'ID actuel est un UUID PostgreSQL valide
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newCourse.id);
+
+  // 2. On prépare les données à envoyer à Supabase (sans l'ID pour l'instant)
+  const coursePayload = {
+    title: newCourse.title || "Sans titre",
+    description: newCourse.description || "",
+    status: newCourse.status || "draft",
+    trainer_id: newCourse.trainerId || newCourse.trainer_id || null, // UUID du formateur
+    category: newCourse.category || "Général",
+    duration: newCourse.duration || "-",
+    level: newCourse.level || "Tous niveaux",
+    price: Number(newCourse.price) || 0,
+    modules: newCourse.modules || [],
+    quiz: newCourse.quiz || [],
+    sessions: newCourse.sessions || [],
+    resources: newCourse.resources || []
+  };
+
+  // CAS D'UNE MODIFICATION : Si c'est un vrai UUID, on l'ajoute pour cibler la bonne ligne
+  // CAS D'UN IMPORT / CRÉATION : On n'inclut pas 'id', Supabase va exécuter son gen_random_uuid()
+  if (isUUID) {
+    coursePayload.id = newCourse.id;
+  }
+
+  try {
+    // L'utilisation de .select().single() est obligatoire pour récupérer la ligne créée avec son nouvel ID
+    const { data: savedRow, error } = await window.supabaseInstance
+      .from("courses")
+      .upsert(coursePayload, { onConflict: 'id' })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 3. Si c'était un nouveau cours, Supabase lui a donné un ID. On met à jour le frontend.
+    if (!isUUID && savedRow) {
+      const oldId = newCourse.id;
+      const generatedUUID = savedRow.id; // Le vrai UUID généré par ta base
+      
+      console.log(`[Supabase] Cours inséré. ID généré par la DB : ${generatedUUID}`);
+
+      // Mettre à jour l'objet en cours d'utilisation
+      newCourse.id = generatedUUID;
+
+      // Mettre à jour l'ID dans ton tableau global en mémoire
+      if (typeof courses !== 'undefined' && Array.isArray(courses)) {
+        const index = courses.findIndex(c => c.id === oldId);
+        if (index !== -1) {
+          courses[index].id = generatedUUID;
+        } else {
+          courses.push({ ...newCourse, id: generatedUUID });
+        }
+      }
+
+      // Mettre à jour les demandes d'inscription locales qui pointaient vers l'ancien ID de l'import
+      if (typeof enrollmentRequests !== 'undefined' && Array.isArray(enrollmentRequests)) {
+        enrollmentRequests.forEach(req => {
+          if (req.courseId === oldId || req.course_id === oldId) {
+            req.courseId = generatedUUID;
+            req.course_id = generatedUUID;
+          }
+        });
+        if (typeof saveRequestsToStorage === 'function') saveRequestsToStorage();
+      }
+
+      // Sauvegarder la liste mise à jour avec les vrais UUIDs dans le localStorage
+      if (typeof saveCoursesToStorage === 'function') {
+        saveCoursesToStorage();
+      } else {
+        localStorage.setItem("icca_local_courses", JSON.stringify(courses));
+      }
+
+      // Optionnel : Forcer un re-rendu de l'interface pour stabiliser les boutons/liens avec le nouvel ID
+      if (typeof renderWorkspacePage === "function") {
+        renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
+      }
+    } else {
+      console.log(`[Supabase] Mise à jour réussie pour le cours : ${newCourse.title}`);
+    }
+
+  } catch (e) {
+    console.error("[Supabase] Échec de l'enregistrement du cours :", e.message);
   }
 }
