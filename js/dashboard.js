@@ -583,16 +583,31 @@ function getSessionUserId() {
 function getSessionUser() {
   const id = getSessionUserId();
   const fallbackRole = sessionStorage.getItem("iccaAuthenticatedUserRole") || sessionStorage.getItem("iccaCurrentUserRole") || "admin";
-  // Priorité 1 : données persistées en sessionStorage par auth-supabase.js (toujours correctes)
+  
+  // Priorité 1 : données persistées en sessionStorage par auth-supabase.js
   const storedFirstName = sessionStorage.getItem("iccaCurrentUserFirstName");
   const storedLastName = sessionStorage.getItem("iccaCurrentUserLastName");
   const storedEmail = sessionStorage.getItem("iccaCurrentUserEmail");
+  const storedUserName = sessionStorage.getItem("iccaCurrentUserName");
+
   if (storedFirstName || storedLastName || storedEmail) {
-    const firstName = storedFirstName || storedEmail || "Utilisateur";
+    // CORRECTION : On ne met plus l'e-mail par défaut dans le prénom s'il est absent
+    const firstName = storedFirstName || "";
     const lastName = storedLastName || "";
-    const avatar = ((firstName[0] || "") + (lastName[0] || "")).toUpperCase() || fallbackRole[0].toUpperCase();
+    
+    // Génération intelligente des initiales de l'avatar
+    let avatar = "";
+    if (firstName || lastName) {
+      avatar = ((firstName[0] || "") + (lastName[0] || "")).toUpperCase();
+    } else if (storedUserName && !storedUserName.includes("@")) {
+      avatar = storedUserName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+    } else {
+      avatar = fallbackRole[0].toUpperCase();
+    }
+
     return { id, firstName, lastName, role: fallbackRole, email: storedEmail || "", avatar };
   }
+  
   // Priorité 2 : chercher dans users[] (chargé depuis Supabase)
   return getUser(id) || {
     id,
@@ -603,20 +618,78 @@ function getSessionUser() {
   };
 }
 
-// Met à jour le chip utilisateur dans la topbar sans re-rendre toute la page
 function syncUserChip() {
   const chip = document.querySelector(".user-chip");
   if (!chip) return;
+  
   const currentUser = getSessionUser();
   const label = currentUser.role === "trainer" ? "Formateur connecté"
               : currentUser.role === "participant" ? "Participant connecté"
               : "Administrateur connecté";
-  const name = `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim()
-             || sessionStorage.getItem("iccaCurrentUserEmail")
-             || "Compte connecté";
+
+  // Récupération du nom (Ta logique exacte)
+  let name = `${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim();
+  const savedUserName = sessionStorage.getItem("iccaCurrentUserName");
+
+  // Sécurité : Si le prénom/nom est vide ou contient un e-mail, on applique la valeur de l'image (iccaCurrentUserName)
+  if ((!name || name.includes("@")) && savedUserName) {
+    name = savedUserName;
+  } else if (!name) {
+    name = "Compte connecté";
+  }
+
+  // Ajustement de l'avatar si jamais il affiche la première lettre de l'e-mail
+  let avatarText = currentUser.avatar;
+  if ((!currentUser.firstName || currentUser.firstName.includes("@")) && savedUserName && !savedUserName.includes("@")) {
+    avatarText = savedUserName.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
+  }
+
   chip.setAttribute("aria-label", label);
-  chip.innerHTML = `<span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span><span>${escapeHTML(name)}</span>`;
+
+  // CORRECTION : On conserve EXACTEMENT ta structure HTML originale pour ne pas casser ton CSS,
+  // et on injecte simplement le chevron et la boîte du menu à la suite.
+  chip.innerHTML = `
+    <span class="avatar">${avatarText || "IC"}</span>
+    <span>${escapeHTML(name)}</span>
+    <span class="user-chip-chevron">▼</span>
+    
+    <div class="user-chip-dropdown">
+      <a href="profile.html" class="dropdown-item">
+        <span class="dropdown-icon">👤</span> Mon Profil
+      </a>
+      <button id="logout-btn" class="dropdown-item logout-item" type="button">
+        <span class="dropdown-icon">🚪</span> Déconnexion
+      </button>
+    </div>
+  `;
 }
+
+// 🛑 ÉCOUTEUR GLOBAL UNIQUE : À mettre tout à la fin de ton fichier dashboard.js (hors de toute fonction)
+// Cette méthode intercepte les clics de manière centralisée et règle tous les bugs de clics.
+document.addEventListener("click", (e) => {
+  const chip = document.querySelector(".user-chip");
+  if (!chip) return;
+
+  // 1. Gestion du clic sur le bouton Déconnexion
+  if (e.target.closest("#logout-btn")) {
+    sessionStorage.clear(); // Vide proprement toute la session
+    window.location.href = "login.html"; // Redirection
+    return;
+  }
+
+  // 2. Gestion de l'ouverture / fermeture du menu au clic sur le chip
+  if (chip.contains(e.target)) {
+    // Si on clique sur le menu déroulant lui-même, on laisse le lien s'ouvrir normalement
+    if (e.target.closest(".user-chip-dropdown")) return;
+    
+    // Sinon, on intercepte le clic pour afficher/masquer la liste
+    e.preventDefault();
+    chip.classList.toggle("active");
+  } else {
+    // Si on clique n'importe où ailleurs sur la page, on ferme le menu
+    chip.classList.remove("active");
+  }
+});
 
 function getWorkspaceRole() {
   return sessionStorage.getItem("iccaAuthenticatedUserRole") || sessionStorage.getItem("iccaCurrentUserRole") || getSessionUser().role || "admin";
@@ -1197,7 +1270,7 @@ function setupWorkspaceShell(role) {
     </nav>
   `;
 
-  topbar.innerHTML = `
+ topbar.innerHTML = `
     <div>
       <div class="topbar-kicker">${roleLabel}</div>
       <div class="topbar-title">${role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents"}</div>
@@ -1212,9 +1285,20 @@ function setupWorkspaceShell(role) {
           `).join("")}
         </nav>
       ` : ""}
+      
       <div class="user-chip" aria-label="${currentUser.role === "trainer" ? "Formateur connecté" : currentUser.role === "participant" ? "Participant connecté" : "Administrateur connecté"}">
         <span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span>
-        <span>${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || sessionStorage.getItem("iccaCurrentUserEmail") || "Compte connecté")}</span>
+        <span class="user-name">${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || sessionStorage.getItem("iccaCurrentUserEmail") || "Compte connecté")}</span>
+        <span class="user-chip-chevron">▼</span>
+        
+        <div class="user-chip-dropdown">
+          <a href="profile.html" class="dropdown-item">
+            <span class="dropdown-icon">👤</span> Mon Profil
+          </a>
+          <button id="logout-btn" class="dropdown-item logout-item" type="button">
+            <span class="dropdown-icon">🚪</span> Déconnexion
+          </button>
+        </div>
       </div>
     </div>
   `;
