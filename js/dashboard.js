@@ -1224,7 +1224,7 @@ function setupWorkspaceShell(role) {
     ["remises", "Remises"],
     ["participants", "Participants"],
     ["tracking", "Suivi"],
-    ["preview", "Prévisualisation"],
+    ["preview", "Cours de la formation"],
     ["submissions", "Demandes"],
     ["studio", "Studio"],
     ["import", "Import"]
@@ -1234,9 +1234,7 @@ function setupWorkspaceShell(role) {
     ["courses", "Mes cours"],
     ["modules", "Modules en cours"],
     ["resources", "Ressources"],
-    ["quiz", "Quiz"],
     ["requests", "Demandes"],
-    ["calendar", "Calendrier"],
     ["certificates", "Certificats"]
   ] : [
     ["dashboard", "Tableau de bord"],
@@ -2060,25 +2058,164 @@ function renderTrainerTracking(uid) {
   `;
 }
 
-function renderTrainerPreview(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Prévisualisation</span></div>
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Prévisualisation</h1>
-        <p class="page-subtitle">Visualisez votre cours comme le verrait un apprenant.</p>
-      </div>
-    </div>
-    <div class="grid-2">
-      ${trainerCourses.map(course => `
-        <div class="card">
-          <div class="card-title">${icon("eye", 18)} ${escapeHTML(course.title)}</div>
-          <p class="card-subtitle">Aperçu du contenu, des modules et des ressources.</p>
-          <button class="btn btn-primary btn-sm" onclick="showToast('Ouverture de la prévisualisation ${escapeHTML(course.title)}', 'success')">${icon("eye", 13)} Ouvrir l'aperçu</button>
-        </div>
+// ─── helpers pour la page Cours d'une formation ──────────────────────────────
+
+function courseTypeLabel(type) {
+  const map = {
+    html: "Page HTML",
+    excel: "Feuille Excel",
+    powerpoint: "Présentation",
+    json: "Données JSON",
+    markdown: "Markdown",
+    dragdrop: "Glisser-déposer",
+    video: "Vidéo YouTube"
+  };
+  return map[type] || "Fichier";
+}
+
+function courseTypeIcon(type) {
+  const map = {
+    html: "zap",
+    excel: "grid",
+    powerpoint: "layers",
+    json: "settings",
+    markdown: "fileText",
+    dragdrop: "upload",
+    video: "eye"
+  };
+  return icon(map[type] || "fileText", 15);
+}
+
+function courseTypeBadgeClass(type) {
+  const map = {
+    html: "badge--info",
+    excel: "badge--success",
+    powerpoint: "badge--warn",
+    json: "badge--info",
+    markdown: "",
+    dragdrop: "",
+    video: "badge--danger"
+  };
+  return map[type] || "";
+}
+
+function openAddCourseModal(formationId) {
+  const types = [
+    { key: "html",        label: "Page HTML",         desc: "Un fichier .html structuré comme module de cours." },
+    { key: "excel",       label: "Feuille Excel",      desc: "Tableur .xlsx affiché en lecture dans la formation." },
+    { key: "powerpoint",  label: "Présentation PPT",   desc: "Diaporama .pptx converti en cours interactif." },
+    { key: "json",        label: "Données JSON",       desc: "Contenu structuré au format .json." },
+    { key: "markdown",    label: "Fichier Markdown",   desc: "Document .md rendu en page de cours." },
+    { key: "dragdrop",    label: "Glisser-déposer",    desc: "Déposez n'importe quel fichier directement." },
+    { key: "video",       label: "Vidéo YouTube",      desc: "Lien YouTube intégré en lecteur dans la page." }
+  ];
+
+  const body = `
+    <p style="color:var(--text-muted);font-size:13px;margin:0 0 18px;">
+      Choisissez le type de contenu à ajouter à cette formation.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;">
+      ${types.map(t => `
+        <button
+          class="btn btn-secondary"
+          style="display:flex;align-items:center;gap:10px;text-align:left;padding:12px 14px;height:auto;line-height:1.3;"
+          onclick="closeModal(); showToast('Ajout d\'un cours «\u202f${t.label}\u202f» — fonctionnalité à venir.', 'info')">
+          <span style="flex-shrink:0;opacity:.7;">${courseTypeIcon(t.key)}</span>
+          <span>
+            <strong style="font-size:13px;font-weight:700;display:block;">${t.label}</strong>
+            <span style="font-size:11px;color:var(--text-muted);font-weight:400;">${t.desc}</span>
+          </span>
+        </button>
       `).join("")}
     </div>
+  `;
+
+  showModal(
+    `${icon("plus", 16)} Ajouter un cours`,
+    body,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>`
+  );
+}
+
+function renderTrainerPreview(uid) {
+  const trainerFormations = getTrainerCourses(uid);
+
+  if (!trainerFormations.length) {
+    return `
+      <div class="breadcrumb"><span>Espace Formateur</span><span>Cours d'une formation</span></div>
+      <div class="page-header">
+        <div>
+          <h1 class="page-title">Cours d'une formation</h1>
+          <p class="page-subtitle">Sélectionnez une formation pour gérer ses cours.</p>
+        </div>
+      </div>
+      ${trainerEmptyState("Aucune formation", "Votre compte n'est lié à aucune formation pour le moment.")}
+    `;
+  }
+
+  // Formation sélectionnée
+  if (!appState.trainerSelectedCourseId || !trainerFormations.find(f => f.id === appState.trainerSelectedCourseId)) {
+    appState.trainerSelectedCourseId = trainerFormations[0].id;
+  }
+  const selectedFormation = trainerFormations.find(f => f.id === appState.trainerSelectedCourseId);
+  const modules = Array.isArray(selectedFormation?.modules) ? selectedFormation.modules : [];
+
+  // Injecter un champ 'type' de démo si absent (les modules mock n'ont pas de type)
+  const DEMO_TYPES = ["html", "video", "markdown", "powerpoint", "excel", "json", "dragdrop"];
+  const displayModules = modules.map((m, i) => ({
+    ...m,
+    type: m.type || DEMO_TYPES[i % DEMO_TYPES.length]
+  }));
+
+  return `
+    <div class="breadcrumb"><span>Espace Formateur</span><span>Cours de la formation</span></div>
+    <div class="page-header" style="flex-wrap:wrap;gap:12px;">
+      <div style="flex:1;min-width:200px;">
+        <h1 class="page-title">Cours de la formation</h1>
+        <p class="page-subtitle">Gérez et prévisualisez les cours insérés dans cette formation.</p>
+      </div>
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <select
+          class="form-control"
+          style="min-width:240px;"
+          onchange="appState.trainerSelectedCourseId = this.value; renderWorkspacePage(getWorkspaceRole(), 'preview');">
+          ${trainerFormations.map(f => `
+            <option value="${f.id}" ${f.id === appState.trainerSelectedCourseId ? "selected" : ""}>${escapeHTML(f.title)}</option>
+          `).join("")}
+        </select>
+        <button
+          class="btn btn-primary"
+          onclick="openAddCourseModal('${selectedFormation.id}')">
+          ${icon("plus", 15)} Ajouter un cours
+        </button>
+      </div>
+    </div>
+
+    ${displayModules.length === 0 ? `
+      <div style="margin-top:8px;">
+        ${trainerEmptyState("Aucun cours", "Cette formation ne contient pas encore de cours. Ajoutez-en un avec le bouton ci-dessus.")}
+      </div>
+    ` : `
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+        ${displayModules.map((m, idx) => `
+          <div class="card" style="display:flex;align-items:center;gap:16px;padding:16px 20px;">
+            <div style="flex-shrink:0;width:38px;height:38px;border-radius:10px;background:var(--surface-2,#f1f3f7);display:flex;align-items:center;justify-content:center;color:var(--primary);">
+              ${courseTypeIcon(m.type)}
+            </div>
+            <div style="flex:1;min-width:0;">
+              <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;">${escapeHTML(m.title)}</div>
+              ${m.desc ? `<div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(m.desc)}</div>` : ""}
+            </div>
+            <span class="badge ${courseTypeBadgeClass(m.type)}" style="flex-shrink:0;">${courseTypeIcon(m.type)} ${courseTypeLabel(m.type)}</span>
+            <div style="flex-shrink:0;display:flex;gap:8px;">
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Prévisualisation du cours «\u202f${escapeHTML(m.title)}\u202f» — fonctionnalité à venir.', 'info')">${icon("eye", 13)} Aperçu</button>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('Modification du cours «\u202f${escapeHTML(m.title)}\u202f» — fonctionnalité à venir.', 'info')">${icon("edit", 13)}</button>
+              <button class="btn btn-secondary btn-sm" style="color:var(--danger);" onclick="showToast('Suppression désactivée en mode démo.', 'warn')">${icon("trash", 13)}</button>
+            </div>
+          </div>
+        `).join("")}
+      </div>
+    `}
   `;
 }
 
@@ -2159,7 +2296,7 @@ function renderTrainerImport(uid) {
     <div class="settings-grid">
       <div class="settings-card">
         <div class="card-head">Démarrer un import</div>
-        <p class="settings-note">Sélectionnez un ou plusieurs fichiers <strong>.html</strong> (un module sera créé par fichier) et <strong>.pdf</strong> (ajoutés comme ressources téléchargeables). Vous renseignerez ensuite le titre, la <strong>date du cours</strong> (obligatoire), le prix et la description. Vous pourrez aussi joindre un <strong>fichier quiz .json</strong> optionnel.</p>
+        <p class="settings-note">Sélectionnez un ou plusieurs fichiers <strong>.html</strong> (un module sera créé par fichier) et <strong>.pdf</strong> (ajoutés comme ressources téléchargeables). La formation est créée immédiatement avec le nom du dossier ou fichier comme titre — vous pourrez le modifier depuis "Mes formations".</p>
         <input type="file" id="trainerImportFilesInput" accept=".html,.htm,.pdf,.zip" multiple style="display:none" onchange="handleTrainerImportFilesChange(event)">
         <button class="btn btn-primary" onclick="triggerTrainerImportFiles()">${icon("upload", 14)} Choisir des fichiers</button>
       </div>
@@ -2207,7 +2344,18 @@ async function handleTrainerImportFilesChange(event) {
   }
 
   pendingImportFiles = fileList;
-  openTrainerImportDetailsModal(fileList);
+  // Déduire le titre depuis le nom du dossier commun ou du premier fichier HTML
+  const htmlFile = fileList.find(f => /\.html?$/i.test(f.name));
+  const firstFile = htmlFile || fileList[0];
+  // Essayer de récupérer le nom de dossier commun (webkitRelativePath) sinon le nom de fichier sans extension
+  let autoTitle = "";
+  if (firstFile.webkitRelativePath) {
+    autoTitle = firstFile.webkitRelativePath.split("/")[0];
+  }
+  if (!autoTitle) {
+    autoTitle = firstFile.name.replace(/\.[^.]+$/, "");
+  }
+  confirmTrainerImportFromFilesAuto(fileList, autoTitle);
 }
 
 function openTrainerImportDetailsModal(fileList) {
@@ -2263,6 +2411,68 @@ function openTrainerImportDetailsModal(fileList) {
 function cancelTrainerImportFiles() {
   pendingImportFiles = null;
   closeModal();
+}
+
+// Import automatique sans fenêtre intermédiaire : le titre = nom du dossier / fichier importé
+async function confirmTrainerImportFromFilesAuto(fileList, autoTitle) {
+  if (!fileList || fileList.length === 0) return;
+
+  showToast("Traitement des fichiers en cours…", "info");
+
+  try {
+    const htmlFiles = fileList.filter(f => /\.html?$/i.test(f.name));
+    const pdfFiles  = fileList.filter(f => /\.pdf$/i.test(f.name));
+
+    const modules = [];
+    for (const file of htmlFiles) {
+      modules.push(await extractModuleFromHTMLFile(file));
+    }
+    const resources = pdfFiles.map(file => ({ name: file.name, sizeKB: Math.round(file.size / 1024) }));
+
+    const uid = getSessionUserId();
+    const newCourse = {
+      id: `course_import_${Date.now()}`,
+      title: autoTitle,
+      status: "published",
+      trainerId: uid,
+      category: "Général",
+      duration: "-",
+      price: 0,
+      level: "Débutant",
+      description: "",
+      modules,
+      quiz: [],
+      sessions: [],
+      resources,
+      resourceCount: resources.length,
+      isLocalImport: true
+    };
+
+    courses.push(newCourse);
+    saveImportedCoursesToStorage();
+
+    if (window.supabaseInstance) {
+      (async () => {
+        try {
+          await window.supabaseInstance.from("courses").insert({
+            id: newCourse.id,
+            title: newCourse.title,
+            status: newCourse.status,
+            trainer_id: uid
+          });
+        } catch (e) {
+          console.warn("[import auto] Supabase insert échoué, cours sauvegardé localement.", e.message);
+        }
+      })();
+    }
+
+    pendingImportFiles = null;
+    showToast(`Formation "${newCourse.title}" importée (${modules.length} module(s), ${resources.length} ressource(s)).`, "success");
+    renderWorkspacePage("trainer", "myteaching");
+  } catch (e) {
+    console.error("[import auto] Erreur :", e);
+    showToast("Erreur lors de l'import : " + e.message, "danger");
+  }
 }
 
 async function extractModuleFromHTMLFile(file) {
@@ -2631,7 +2841,14 @@ function renderParticipantCourses(uid) {
     <div class="page-header"><div><h1 class="page-title">Mes cours</h1><p class="page-subtitle">Vos formations actives et votre progression détaillée.</p></div></div>
     <div class="grid-2">
       ${participantCourses.map(item => {
-        const demo = item.course ? getDemoCourse(item.course.id) : null;
+        const courseId = item.course ? item.course.id : null;
+        const demo = courseId ? getDemoCourse(courseId) : null;
+        
+        // 🌟 CORRECTION : On charge les modules dynamiques créés par le formateur
+        const dynamicModules = courseId ? loadFormationModules(courseId) : [];
+        // On affiche les modules dynamiques s'ils existent, sinon on se rabat sur la démo
+        const modulesToDisplay = dynamicModules.length > 0 ? dynamicModules : (demo ? demo.modules : []);
+
         return `
           <div class="card" style="display:flex; flex-direction:column; gap:10px;">
             <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:8px;">
@@ -2642,17 +2859,26 @@ function renderParticipantCourses(uid) {
             <div class="settings-note">Inscrit le ${fmtDate(item.enrollment.enrollmentDate)} • Accès ${item.enrollment.paymentStatus === "paid" ? "validé" : "en attente"}</div>
             <div class="progress-bar" style="height:10px; background:#e9eef5; border-radius:999px; overflow:hidden;"><div style="width:${item.progress}%; height:100%; background:linear-gradient(135deg, var(--accent), var(--primary));"></div></div>
             <div class="settings-note">${item.progress}% complété</div>
-            ${demo ? `
-              <div style="margin-top:4px;">
-                <div class="settings-note" style="font-weight:600; margin-bottom:6px;">Modules :</div>
-                ${demo.modules.map((m, i) => `
-                  <div class="activity-item" style="margin-bottom:4px;">
+            
+            <div style="margin-top:4px;">
+              <div class="settings-note" style="font-weight:600; margin-bottom:6px;">Modules disponibles :</div>
+              ${modulesToDisplay.map((m, i) => `
+                <div class="activity-item" style="margin-bottom:6px; display:flex; justify-content:space-between; align-items:center; background:#f8fafc; padding:8px; border-radius:6px;">
+                  <div style="display:flex; align-items:center; gap:8px; width:75%;">
                     <span class="activity-dot"></span>
-                    <div class="activity-content"><div><strong>Module ${i+1} – ${escapeHTML(m.title)}</strong></div><div class="activity-time">${escapeHTML(m.desc)}</div></div>
+                    <div class="activity-content">
+                      <div><strong>${escapeHTML(m.title || `Module ${i+1}`)}</strong></div>
+                      <div class="activity-time" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${escapeHTML(m.desc || "")}</div>
+                    </div>
                   </div>
-                `).join("")}
-              </div>
-            ` : ""}
+                  <button class="btn btn-secondary btn-sm" style="padding:2px 8px; font-size:11px;" 
+                    onclick="handleParticipantModuleClick('${courseId}', '${m.id || i}', '${m.type || 'video'}', ${i})">
+                    Lire
+                  </button>
+                </div>
+              `).join("") || `<div class="settings-note" style="color:var(--text-muted);">Aucun module dans cette formation.</div>`}
+            </div>
+
             <div class="row-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;">
               <button class="btn btn-secondary btn-sm" onclick="navigate('modules')">${icon("layers", 13)} Modules</button>
               <button class="btn btn-secondary btn-sm" onclick="navigate('calendar')">${icon("calendar", 13)} Calendrier</button>
@@ -2671,14 +2897,38 @@ function renderParticipantModules(uid) {
     <div class="breadcrumb"><span>Espace Apprenant</span><span>Modules en cours</span></div>
     <div class="page-header"><div><h1 class="page-title">Modules en cours</h1><p class="page-subtitle">Les chapitres ouverts pour vos formations actives.</p></div></div>
     <div class="grid-2">
-      ${participantCourses.map(item => `
-        <div class="card">
-          <div class="card-title">${icon("layers", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
-          <div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>Module 1</strong></div><div class="activity-time">Introduction et objectifs</div></div></div>
-          <div class="activity-item"><span class="activity-dot"></span><div class="activity-content"><div><strong>Module 2</strong></div><div class="activity-time">Exercices guidés</div></div></div>
-          <button class="btn btn-secondary btn-sm" onclick="navigate('resources')">${icon("fileText", 13)} Voir les ressources</button>
-        </div>
-      `).join("") || trainerEmptyState("Aucun module", "Ouvrez un cours approuvé pour afficher ses modules.")}
+      ${participantCourses.map(item => {
+        const courseId = item.course ? item.course.id : null;
+        const demo = courseId ? getDemoCourse(courseId) : null;
+        
+        // 🌟 CORRECTION : Remplacement du contenu codé en dur par les vrais modules
+        const dynamicModules = courseId ? loadFormationModules(courseId) : [];
+        const modulesToDisplay = dynamicModules.length > 0 ? dynamicModules : (demo ? demo.modules : []);
+
+        return `
+          <div class="card">
+            <div class="card-title" style="margin-bottom:12px;">${icon("layers", 18)} ${item.course ? escapeHTML(item.course.title) : "-"}</div>
+            
+            ${modulesToDisplay.map((m, i) => `
+              <div class="activity-item" style="display:flex; justify-content:space-between; align-items:center; padding:6px 0; border-bottom:1px solid #f1f5f9;">
+                <div style="display:flex; align-items:center; gap:8px;">
+                  <span class="activity-dot"></span>
+                  <div class="activity-content">
+                    <div><strong>${escapeHTML(m.title || `Module ${i+1}`)}</strong> <span class="badge" style="font-size:10px; padding:1px 5px; text-transform:uppercase;">${m.type || 'cours'}</span></div>
+                    <div class="activity-time">${escapeHTML(m.desc || "")}</div>
+                  </div>
+                </div>
+                <button class="btn btn-primary btn-sm" style="font-size:12px; padding:4px 10px;" 
+                  onclick="handleParticipantModuleClick('${courseId}', '${m.id || i}', '${m.type || 'video'}', ${i})">
+                  Ouvrir
+                </button>
+              </div>
+            `).join("") || `<p class="settings-note">Aucun module disponible pour le moment.</p>`}
+            
+            <button class="btn btn-secondary btn-sm" style="margin-top:14px; width:100%;" onclick="navigate('resources')">${icon("fileText", 13)} Voir les ressources</button>
+          </div>
+        `;
+      }).join("") || trainerEmptyState("Aucun module", "Ouvrez un cours approuvé pour afficher ses modules.")}
     </div>
   `;
 }
@@ -3346,3 +3596,67 @@ document.addEventListener("DOMContentLoaded", () => {
     setTimeout(() => showLoginNotifications(uid), 600);
   }
 });
+
+function handleParticipantModuleClick(formationId, moduleId, type, index) {
+  // 1. Initialiser toutes les variables globales d'identification
+  window._activeFormationId = formationId;
+  window.activeFormationId = formationId;
+  window.currentFormationId = formationId;
+  window._pendingVideoFormationId = formationId; 
+
+  // 2. Trouver le module de manière ultra-sécurisée
+  let activeModule = null;
+
+  // On vérifie d'abord si la variable globale 'courses' existe et est définie
+  if (typeof courses !== "undefined" && Array.isArray(courses)) {
+    const foundCourse = courses.find(c => String(c.id) === String(formationId));
+    if (foundCourse && foundCourse.modules) {
+      activeModule = foundCourse.modules[index] || foundCourse.modules.find(m => String(m.id) === String(moduleId));
+    }
+  }
+
+  // Si on ne l'a pas trouvé dans 'courses', on cherche dans le cours de démo
+  if (!activeModule && typeof getDemoCourse === "function") {
+    const demo = getDemoCourse(formationId);
+    if (demo && demo.modules) {
+      activeModule = demo.modules[index] || demo.modules.find(m => String(m.id) === String(moduleId));
+    }
+  }
+
+  // 3. Lancement du lecteur approprié
+  if (type === "video") {
+    if (typeof previewYoutubeModule === "function") {
+      if (activeModule) {
+        // Extraction du youtubeId si absent
+        let ytId = activeModule.youtubeId;
+        if (!ytId && (activeModule.youtubeUrl || activeModule.videoUrl)) {
+          const url = activeModule.youtubeUrl || activeModule.videoUrl || "";
+          const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+          const match = url.match(regExp);
+          ytId = (match && match[2].length === 11) ? match[2] : "";
+        }
+        
+        const title = activeModule.title || "Cours Vidéo";
+
+        // Appel propre avec l'ID YouTube et le Titre de la vidéo
+        previewYoutubeModule(ytId, title);
+      } else {
+        // Si on ne trouve vraiment rien, on tente de passer des valeurs par défaut avec l'id s'il est valide
+        if (moduleId && moduleId.length === 11) {
+          previewYoutubeModule(moduleId, "Cours Vidéo");
+        } else {
+          showToast("Impossible de récupérer les informations de la vidéo.", "error");
+        }
+      }
+    } else {
+      showToast("Le module de visionnage vidéo n'est pas chargé.", "error");
+    }
+  } else {
+    // Lecture des autres documents (PDF, Quiz, Texte)
+    if (typeof previewGenericModule === "function") {
+      previewGenericModule(formationId, moduleId);
+    } else {
+      showToast("Le module de lecture de documents n'est pas chargé.", "error");
+    }
+  }
+}
