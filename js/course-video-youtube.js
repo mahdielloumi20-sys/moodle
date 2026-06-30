@@ -143,7 +143,38 @@ function previewYoutubeThumbnail() {
 
 // ─── Étape 2 : validation et sauvegarde ─────────────────────────────────────
 
-function confirmAddYoutubeVideo() {
+// Récupère (ou crée) une section par défaut pour un cours donné.
+// course_contents.section_id pointe vers course_sections.id, PAS vers courses.id —
+// il faut donc toujours passer par une vraie ligne course_sections.
+// (Identique à la version définie dans course-otherTypes.js — gardée ici aussi
+// pour que ce fichier fonctionne même chargé indépendamment.)
+async function ensureDefaultSection(courseId) {
+  const { data: existingSections, error: fetchError } = await window.supabaseInstance
+    .from("course_sections")
+    .select("id")
+    .eq("course_id", courseId)
+    .order("position", { ascending: true })
+    .limit(1);
+
+  if (fetchError) throw fetchError;
+
+  if (existingSections && existingSections.length > 0) {
+    return existingSections[0].id;
+  }
+
+  const { data: newSection, error: insertError } = await window.supabaseInstance
+    .from("course_sections")
+    .insert([{ course_id: courseId, title: "Général", position: 0 }])
+    .select()
+    .single();
+
+  if (insertError) throw insertError;
+
+  console.log("[Supabase] Section par défaut créée pour le cours :", courseId, "->", newSection.id);
+  return newSection.id;
+}
+
+async function confirmAddYoutubeVideo() {
   const formationId = window._pendingVideoFormationId;
   const title   = (document.getElementById("yt_title")?.value || "").trim();
   const desc    = (document.getElementById("yt_desc")?.value  || "").trim();
@@ -176,29 +207,42 @@ function confirmAddYoutubeVideo() {
     addedAt: new Date().toISOString()
   };
 
-  // Sauvegarde locale
+  // Si Supabase est disponible, on persiste côté serveur en priorité (source de vérité)
+  if (window.supabaseInstance) {
+    try {
+      const sectionId = await ensureDefaultSection(formationId);
+
+      const { data: insertedRows, error: dbError } = await window.supabaseInstance
+        .from("course_contents")
+        .insert([
+          {
+            section_id: sectionId,
+            title: title,
+            content_type: "video",
+            content: url,           // on stocke l'URL YouTube d'origine ; youtubeId est re-parsable avec parseYoutubeId()
+            description: desc || null
+          }
+        ])
+        .select();
+
+      if (dbError) throw dbError;
+
+      newModule.id = insertedRows[0].id;
+      console.log("[Supabase] Vidéo YouTube enregistrée :", insertedRows);
+    } catch (e) {
+      console.error("[addYoutubeVideo] Échec de l'enregistrement Supabase :", e.message);
+      if (errorEl) {
+        errorEl.textContent = `Erreur lors de l'enregistrement : ${e.message}`;
+        errorEl.style.display = "block";
+      }
+      return; // on n'enregistre pas localement si Supabase a échoué, pour éviter une désynchro silencieuse
+    }
+  }
+
+  // Sauvegarde locale (cache d'affichage, une fois Supabase confirmé)
   const existing = loadFormationModules(formationId);
   existing.push(newModule);
   saveFormationModules(formationId, existing);
-
-  // Si Supabase est disponible, on peut persister côté serveur
-  if (window.supabaseInstance) {
-    (async () => {
-      try {
-        await window.supabaseInstance.from("formation_modules").insert({
-          formation_id: formationId,
-          type: "video",
-          title,
-          description: desc,
-          youtube_url: url,
-          youtube_id: youtubeId,
-          created_at: new Date().toISOString()
-        });
-      } catch (e) {
-        console.warn("[addYoutubeVideo] Supabase insert échoué, module sauvegardé localement.", e.message);
-      }
-    })();
-  }
 
   closeModal();
   showToast(`Cours vidéo « ${title} » ajouté avec succès.`, "success");
@@ -272,6 +316,7 @@ function openAddCourseModal(formationId) {
     { key: "document",   label: "Document (PDF)",    desc: "Lien ou support de cours téléchargeable.", disponible: true },
     { key: "quiz",       label: "Quiz / Évaluation", desc: "Questionnaire ou évaluation externe.", disponible: true },
     { key: "text",       label: "Texte / Article",   desc: "Contenu textuel rédigé directement.", disponible: true },
+    { key: "excel",      label: "Feuille Excel",     desc: "Tableur .xlsx/.xls/.csv téléchargeable.", disponible: true },
     { key: "html",       label: "Page HTML",         desc: "Un fichier .html structuré comme module.", disponible: false },
     { key: "markdown",   label: "Fichier Markdown",  desc: "Document .md rendu en page de cours.", disponible: false }
   ];
@@ -281,7 +326,7 @@ function openAddCourseModal(formationId) {
       return `closeModal(); openAddVideoModal('${fId}');`;
     }
     // SI c'est un de tes nouveaux types, on appelle la fonction générique de ton autre fichier
-    if (t.key === "document" || t.key === "quiz" || t.key === "text") {
+    if (t.key === "document" || t.key === "quiz" || t.key === "text" || t.key === "excel") {
       return `closeModal(); openAddModuleModal('${fId}', '${t.key}');`;
     }
     return `closeModal(); showToast('Ajout d\\'un cours «\u202f${t.label}\u202f» — fonctionnalité à venir.', 'info');`;
@@ -404,7 +449,7 @@ function renderTrainerPreview(uid) {
                            onclick="previewYoutubeModule('${m.youtubeId}', '${escapeHTML(m.title).replace(/'/g, "&#39;")}')">
                            ${icon("eye", 13)} Aperçu
                          </button>`;
-          } else if (["document", "quiz", "text"].includes(m.type)) {
+          } else if (["document", "quiz", "text", "excel"].includes(m.type)) {
             // Appelle la fonction de prévisualisation de ton nouveau fichier en lui passant l'ID unique du module
             previewBtn = `<button class="btn btn-sm btn-secondary"
                            onclick="previewGenericModule('${selectedFormation.id}', '${m.id}')">

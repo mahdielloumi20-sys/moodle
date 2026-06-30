@@ -574,6 +574,23 @@ function getSessionUserId() {
   return sessionStorage.getItem("iccaCurrentUserId") || "admin_1";
 }
 
+// Fonction utilitaire rapide pour vérifier si une chaîne est un vrai UUID
+// (utilisée pour valider tout ID destiné à être envoyé à Supabase)
+function isValidUUID(str) {
+  const regex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return typeof str === "string" && regex.test(str);
+}
+
+// 🛡️ Variante sécurisée de getSessionUserId() à utiliser PARTOUT où l'ID part
+// vers Supabase (ex: trainer_id). Contrairement à getSessionUserId(), elle ne
+// renvoie JAMAIS le fallback "admin_1" (qui n'est pas un UUID et fait planter
+// silencieusement les inserts/upserts Postgres). Renvoie null si l'utilisateur
+// n'est pas authentifié avec un vrai UUID Supabase.
+function getSessionUserUUID() {
+  const id = sessionStorage.getItem("iccaCurrentUserId");
+  return isValidUUID(id) ? id : null;
+}
+
 function getSessionUser() {
   const id = getSessionUserId();
   const fallbackRole = sessionStorage.getItem("iccaAuthenticatedUserRole") || sessionStorage.getItem("iccaCurrentUserRole") || "admin";
@@ -1827,12 +1844,17 @@ function renderTrainerCourses(uid) {
           ${trainerCourses.map(course => {
             const participants = enrollments.filter(enrollment => enrollment.courseId === course.id);
             const pending = trainerSubmissions.filter(sub => sub.courseId === course.id && sub.status === "submitted").length;
+            const notSynced = !!course.isLocalImport;
             return `
               <tr>
-                <td><strong>${escapeHTML(course.title)}</strong></td>
+                <td>
+                  <strong>${escapeHTML(course.title)}</strong>
+                  ${notSynced ? `<div style="margin-top:4px;"><span class="badge badge--danger" style="font-size:11px;">⚠ Non synchronisé</span></div>` : ""}
+                </td>
                 <td>${participants.length}</td>
                 <td>${pending}</td>
                 <td class="td-actions">
+                  ${notSynced ? `<button class="btn btn-sm btn-danger" onclick="retryCourseSync('${course.id}')">${icon("refresh", 13)} Resynchroniser</button>` : ""}
                   <button class="btn btn-sm btn-secondary" onclick="navigate('myteaching')">${icon("eye", 13)} Ouvrir</button>
                 </td>
               </tr>
@@ -2192,15 +2214,22 @@ function renderTrainerPreview(uid) {
     ` : `
       <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
         ${displayModules.map((m, idx) => `
-          <div class="card" style="display:flex;align-items:center;gap:16px;padding:16px 20px;">
+          <div class="card" style="display:flex;align-items:center;gap:16px;padding:16px 20px;flex-wrap:wrap;">
             <div style="flex-shrink:0;width:38px;height:38px;border-radius:10px;background:var(--surface-2,#f1f3f7);display:flex;align-items:center;justify-content:center;color:var(--primary);">
               ${courseTypeIcon(m.type)}
             </div>
-            <div style="flex:1;min-width:0;">
+            <div style="flex:1;min-width:160px;">
               <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;">${escapeHTML(m.title)}</div>
               ${m.desc ? `<div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(m.desc)}</div>` : ""}
             </div>
             <span class="badge ${courseTypeBadgeClass(m.type)}" style="flex-shrink:0;">${courseTypeIcon(m.type)} ${courseTypeLabel(m.type)}</span>
+            <button
+              class="btn btn-sm ${m.allowDownload ? "btn-primary" : "btn-secondary"}"
+              style="flex-shrink:0;"
+              title="Cliquez pour ${m.allowDownload ? "désactiver" : "activer"} le téléchargement pour ce cours"
+              onclick="toggleModuleDownload('${selectedFormation.id}', '${m.id}')">
+              ${icon("download", 13)} ${m.allowDownload ? "Téléchargeable" : "Visualisation seule"}
+            </button>
             <div style="flex-shrink:0;display:flex;gap:8px;">
               <button class="btn btn-secondary btn-sm" onclick="showToast('Prévisualisation du cours «\u202f${escapeHTML(m.title)}\u202f» — fonctionnalité à venir.', 'info')">${icon("eye", 13)} Aperçu</button>
               <button class="btn btn-secondary btn-sm" onclick="showToast('Modification du cours «\u202f${escapeHTML(m.title)}\u202f» — fonctionnalité à venir.', 'info')">${icon("edit", 13)}</button>
@@ -2211,6 +2240,43 @@ function renderTrainerPreview(uid) {
       </div>
     `}
   `;
+}
+
+// Active/désactive le téléchargement pour un cours (module) précis d'une formation.
+// Le réglage est stocké au niveau du module (m.allowDownload), pas de la formation,
+// donc chaque cours d'une même formation peut avoir un réglage différent.
+async function toggleModuleDownload(formationId, moduleId) {
+  const course = courses.find(c => c.id === formationId);
+  if (!course || !Array.isArray(course.modules)) {
+    showToast("Formation introuvable.", "danger");
+    return;
+  }
+  const mod = course.modules.find(m => m.id === moduleId);
+  if (!mod) {
+    showToast("Cours introuvable.", "danger");
+    return;
+  }
+
+  mod.allowDownload = !mod.allowDownload;
+
+  // Re-render immédiat pour un retour visuel instantané
+  if (typeof renderWorkspacePage === "function") {
+    renderWorkspacePage("trainer", "preview");
+  }
+
+  saveImportedCoursesToStorage();
+  const synced = await supabaseSaveCourse(course);
+  if (synced) {
+    showToast(
+      `Le cours « ${mod.title} » est maintenant ${mod.allowDownload ? "téléchargeable" : "en visualisation seule"}.`,
+      "success"
+    );
+  } else {
+    showToast(
+      `Réglage appliqué localement, mais la synchronisation avec le serveur a échoué pour « ${mod.title} ».`,
+      "danger"
+    );
+  }
 }
 
 function renderTrainerSubmissions(uid) {
@@ -2338,18 +2404,7 @@ async function handleTrainerImportFilesChange(event) {
   }
 
   pendingImportFiles = fileList;
-  // Déduire le titre depuis le nom du dossier commun ou du premier fichier HTML
-  const htmlFile = fileList.find(f => /\.html?$/i.test(f.name));
-  const firstFile = htmlFile || fileList[0];
-  // Essayer de récupérer le nom de dossier commun (webkitRelativePath) sinon le nom de fichier sans extension
-  let autoTitle = "";
-  if (firstFile.webkitRelativePath) {
-    autoTitle = firstFile.webkitRelativePath.split("/")[0];
-  }
-  if (!autoTitle) {
-    autoTitle = firstFile.name.replace(/\.[^.]+$/, "");
-  }
-  confirmTrainerImportFromFilesAuto(fileList, autoTitle);
+  openTrainerImportDetailsModal(fileList);
 }
 
 function openTrainerImportDetailsModal(fileList) {
@@ -2396,6 +2451,19 @@ function openTrainerImportDetailsModal(fileList) {
       <input type="file" id="imp_quiz_file" accept=".json" class="form-control" style="padding:6px;">
       <div class="settings-note" style="margin-top:6px;">Format attendu : <code>[{"title":"Titre question","questions":10}, …]</code></div>
     </div>
+    <div class="form-group">
+      <label>Accès au contenu pour les participants</label>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+          <input type="radio" name="imp_access" value="view" checked>
+          Visualisation uniquement (le participant consulte le contenu en ligne, sans pouvoir le télécharger)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
+          <input type="radio" name="imp_access" value="download">
+          Visualisation + téléchargement (le participant peut aussi télécharger les fichiers de la formation)
+        </label>
+      </div>
+    </div>
     `,
     `<button class="btn btn-secondary" onclick="cancelTrainerImportFiles()">Annuler</button>
      <button class="btn btn-primary" onclick="confirmTrainerImportFromFiles()">${icon("check", 14)} Créer la formation</button>`
@@ -2423,6 +2491,12 @@ async function confirmTrainerImportFromFilesAuto(fileList, autoTitle) {
     }
     const resources = pdfFiles.map(file => ({ name: file.name, sizeKB: Math.round(file.size / 1024) }));
 
+    // Choix du formateur : visualisation uniquement ou visualisation + téléchargement.
+    // Ce réglage s'applique à chaque cours (module) individuellement, pas à la formation.
+    const accessRadio = document.querySelector('input[name="imp_access"]:checked');
+    const allowDownload = accessRadio ? accessRadio.value === "download" : false;
+    modules.forEach(mod => { mod.allowDownload = allowDownload; });
+
     const uid = getSessionUserId();
     const newCourse = {
       id: `course_import_${Date.now()}`,
@@ -2443,26 +2517,20 @@ async function confirmTrainerImportFromFilesAuto(fileList, autoTitle) {
     };
 
     courses.push(newCourse);
-    await supabaseSaveCourse(newCourse);
+    const synced = await supabaseSaveCourse(newCourse);
+
+    if (synced) {
+      // newCourse.id a été remplacé par le vrai UUID Supabase à l'intérieur de supabaseSaveCourse
+      newCourse.isLocalImport = false;
+    }
     saveImportedCoursesToStorage();
 
-    if (window.supabaseInstance) {
-      (async () => {
-        try {
-          await window.supabaseInstance.from("courses").insert({
-            id: newCourse.id,
-            title: newCourse.title,
-            status: newCourse.status,
-            trainer_id: uid
-          });
-        } catch (e) {
-          console.warn("[import auto] Supabase insert échoué, cours sauvegardé localement.", e.message);
-        }
-      })();
-    }
-
     pendingImportFiles = null;
-    showToast(`Formation "${newCourse.title}" importée (${modules.length} module(s), ${resources.length} ressource(s)).`, "success");
+    if (synced) {
+      showToast(`Formation "${newCourse.title}" importée (${modules.length} module(s), ${resources.length} ressource(s)).`, "success");
+    } else {
+      showToast(`Formation "${newCourse.title}" importée localement, mais la synchronisation avec le serveur a échoué. Réessayez plus tard, sinon elle ne sera pas visible/modifiable depuis les autres espaces (admin, etc.).`, "danger");
+    }
     renderWorkspacePage("trainer", "myteaching");
   } catch (e) {
     console.error("[import auto] Erreur :", e);
@@ -2540,6 +2608,12 @@ async function confirmTrainerImportFromFiles() {
     }
     const resources = pdfFiles.map(file => ({ name: file.name, sizeKB: Math.round(file.size / 1024) }));
 
+    // Choix du formateur : visualisation uniquement ou visualisation + téléchargement.
+    // Ce réglage s'applique à chaque cours (module) individuellement, pas à la formation.
+    const accessRadio = document.querySelector('input[name="imp_access"]:checked');
+    const allowDownload = accessRadio ? accessRadio.value === "download" : false;
+    modules.forEach(mod => { mod.allowDownload = allowDownload; });
+
     const uid = getSessionUserId();
     const newCourse = {
       id: `course_import_${Date.now()}`,
@@ -2560,24 +2634,16 @@ async function confirmTrainerImportFromFiles() {
     };
 
     courses.push(newCourse);
-    await supabaseSaveCourse(newCourse);
+    const synced = await supabaseSaveCourse(newCourse);
+    if (synced) newCourse.isLocalImport = false;
     saveImportedCoursesToStorage();
 
-    if (window.supabaseInstance) {
-      try {
-        await window.supabaseInstance.from("courses").insert({
-          id: newCourse.id,
-          title: newCourse.title,
-          status: newCourse.status,
-          trainer_id: uid
-        });
-      } catch (e) {
-        console.warn("[import fichiers] Insertion Supabase échouée, le cours reste enregistré localement.", e.message);
-      }
-    }
-
     pendingImportFiles = null;
-    showToast(`Formation "${newCourse.title}" créée avec ${modules.length} module(s) et ${resources.length} ressource(s) PDF.`, "success");
+    if (synced) {
+      showToast(`Formation "${newCourse.title}" créée avec ${modules.length} module(s) et ${resources.length} ressource(s) PDF.`, "success");
+    } else {
+      showToast(`Formation "${newCourse.title}" créée localement, mais la synchronisation avec le serveur a échoué. Réessayez plus tard, sinon elle ne sera pas visible/modifiable depuis les autres espaces (admin, etc.).`, "danger");
+    }
     navigate("courses");
   } catch (e) {
     console.error("[import fichiers] Échec du traitement :", e);
@@ -2666,23 +2732,15 @@ async function importCourseFromZipFile(file) {
     };
 
     courses.push(newCourse);
-    await supabaseSaveCourse(newCourse);
+    const synced = await supabaseSaveCourse(newCourse);
+    if (synced) newCourse.isLocalImport = false;
     saveImportedCoursesToStorage();
 
-    if (window.supabaseInstance) {
-      try {
-        await window.supabaseInstance.from("courses").insert({
-          id: newCourse.id,
-          title: newCourse.title,
-          status: newCourse.status,
-          trainer_id: uid
-        });
-      } catch (e) {
-        console.warn("[import ZIP] Insertion Supabase échouée, le cours reste enregistré localement.", e.message);
-      }
+    if (synced) {
+      showToast(`Formation "${newCourse.title}" importée (${newCourse.modules.length} module(s), ${newCourse.quiz.length} quiz, ${resourceFiles.length} ressource(s)).`, "success");
+    } else {
+      showToast(`Formation "${newCourse.title}" importée localement, mais la synchronisation avec le serveur a échoué. Réessayez plus tard, sinon elle ne sera pas visible/modifiable depuis les autres espaces (admin, etc.).`, "danger");
     }
-
-    showToast(`Formation "${newCourse.title}" importée (${newCourse.modules.length} module(s), ${newCourse.quiz.length} quiz, ${resourceFiles.length} ressource(s)).`, "success");
     navigate("courses");
   } catch (e) {
     console.error("[import ZIP] Échec du parsing du paquet :", e);
@@ -2721,20 +2779,15 @@ async function confirmZipCourseDate() {
   };
 
   courses.push(newCourse);
-  await supabaseSaveCourse(newCourse);
+  const synced = await supabaseSaveCourse(newCourse);
+  if (synced) newCourse.isLocalImport = false;
   saveImportedCoursesToStorage();
 
-  if (window.supabaseInstance) {
-    try {
-      await window.supabaseInstance.from("courses").insert({
-        id: newCourse.id, title: newCourse.title, status: newCourse.status, trainer_id: uid
-      });
-    } catch (e) {
-      console.warn("[import ZIP] Insertion Supabase échouée, le cours reste enregistré localement.", e.message);
-    }
+  if (synced) {
+    showToast(`Formation "${newCourse.title}" importée (${newCourse.modules.length} module(s), ${newCourse.quiz.length} quiz, ${resourceFiles.length} ressource(s)).`, "success");
+  } else {
+    showToast(`Formation "${newCourse.title}" importée localement, mais la synchronisation avec le serveur a échoué. Réessayez plus tard, sinon elle ne sera pas visible/modifiable depuis les autres espaces (admin, etc.).`, "danger");
   }
-
-  showToast(`Formation "${newCourse.title}" importée (${newCourse.modules.length} module(s), ${newCourse.quiz.length} quiz, ${resourceFiles.length} ressource(s)).`, "success");
   navigate("courses");
 }
 
@@ -2879,8 +2932,6 @@ function renderParticipantCourses(uid) {
 
             <div class="row-actions" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:auto;">
               <button class="btn btn-secondary btn-sm" onclick="navigate('modules')">${icon("layers", 13)} Modules</button>
-              <button class="btn btn-secondary btn-sm" onclick="navigate('calendar')">${icon("calendar", 13)} Calendrier</button>
-              <button class="btn btn-primary btn-sm" onclick="navigate('quiz')">${icon("check", 13)} Quiz</button>
             </div>
           </div>
         `;
@@ -3679,18 +3730,33 @@ function handleParticipantModuleClick(formationId, moduleId, type, index) {
 
 
 // Fonction utilitaire centralisée pour pousser un cours sur Supabase
+// Retourne true si la formation a bien été enregistrée/synchronisée avec Supabase
+// (avec un vrai UUID), false sinon. Les appelants DOIVENT vérifier cette valeur
+// avant de considérer l'import comme terminé.
 async function supabaseSaveCourse(newCourse) {
-  if (!window.supabaseInstance) return;
+  if (!window.supabaseInstance) return false;
 
   // 1. On vérifie si l'ID actuel est un UUID PostgreSQL valide
   const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(newCourse.id);
 
-  // 2. On prépare les données à envoyer à Supabase (sans l'ID pour l'instant)
+  // 2. 🛡️ On valide le trainer_id AVANT toute requête : un ID comme "admin_1"
+  //    (fallback non-UUID de getSessionUserId) ferait planter silencieusement
+  //    l'upsert Postgres (colonne UUID) et laisserait le cours bloqué en local
+  //    pour toujours avec son ID "course_import_...".
+  const rawTrainerId = newCourse.trainerId || newCourse.trainer_id || null;
+  if (!isValidUUID(rawTrainerId)) {
+    const msg = `Impossible de synchroniser "${newCourse.title || ""}" : l'identifiant du formateur ("${rawTrainerId}") n'est pas valide. Déconnectez-vous puis reconnectez-vous, puis réessayez la synchronisation.`;
+    console.error("[Supabase] trainer_id invalide, upsert annulé :", rawTrainerId);
+    if (typeof showToast === "function") showToast(msg, "danger");
+    return false;
+  }
+
+  // 3. On prépare les données à envoyer à Supabase (sans l'ID pour l'instant)
   const coursePayload = {
     title: newCourse.title || "Sans titre",
     description: newCourse.description || "",
     status: newCourse.status || "draft",
-    trainer_id: newCourse.trainerId || newCourse.trainer_id || null, // UUID du formateur
+    trainer_id: rawTrainerId, // UUID du formateur (validé ci-dessus)
     category: newCourse.category || "Général",
     duration: newCourse.duration || "-",
     level: newCourse.level || "Tous niveaux",
@@ -3749,10 +3815,10 @@ async function supabaseSaveCourse(newCourse) {
       }
 
       // Sauvegarder la liste mise à jour avec les vrais UUIDs dans le localStorage
-      if (typeof saveCoursesToStorage === 'function') {
-        saveCoursesToStorage();
-      } else {
-        localStorage.setItem("icca_local_courses", JSON.stringify(courses));
+      // (icca_imported_courses est la clé réellement relue au démarrage —
+      // l'ancienne clé "icca_local_courses" n'était jamais rechargée)
+      if (typeof saveImportedCoursesToStorage === 'function') {
+        saveImportedCoursesToStorage();
       }
 
       // Optionnel : Forcer un re-rendu de l'interface pour stabiliser les boutons/liens avec le nouvel ID
@@ -3763,7 +3829,48 @@ async function supabaseSaveCourse(newCourse) {
       console.log(`[Supabase] Mise à jour réussie pour le cours : ${newCourse.title}`);
     }
 
+    return true;
+
   } catch (e) {
     console.error("[Supabase] Échec de l'enregistrement du cours :", e.message);
+    if (typeof showToast === "function") {
+      showToast(
+        `La formation "${newCourse.title || ""}" n'a pas pu être synchronisée avec le serveur (${e.message}). Elle reste visible uniquement dans ce navigateur tant que la synchronisation n'a pas réussi.`,
+        "danger"
+      );
+    }
+    return false;
   }
+}
+// 🔄 Permet de retenter manuellement la synchronisation d'un cours resté bloqué
+// en local (ID "course_import_..." jamais remplacé par un vrai UUID Supabase).
+// Appelée depuis le bouton "Resynchroniser" affiché dans "Mes cours" sur les
+// cours dont isLocalImport === true.
+async function retryCourseSync(courseId) {
+  const course = courses.find(c => c.id === courseId);
+  if (!course) {
+    showToast("Cours introuvable.", "danger");
+    return;
+  }
+
+  // On rafraîchit le trainerId avec l'UUID actuellement authentifié, au cas où
+  // le cours avait été créé avec un ID invalide (ex: fallback "admin_1").
+  const currentUUID = getSessionUserUUID();
+  if (currentUUID) {
+    course.trainerId = currentUUID;
+  }
+
+  showToast(`Resynchronisation de "${course.title}"…`, "info");
+  const synced = await supabaseSaveCourse(course);
+
+  if (synced) {
+    course.isLocalImport = false;
+    saveImportedCoursesToStorage();
+    showToast(`"${course.title}" synchronisé avec succès.`, "success");
+    if (typeof renderWorkspacePage === "function") {
+      renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
+    }
+  }
+  // En cas d'échec, supabaseSaveCourse a déjà affiché un toast détaillé (ex:
+  // trainer_id invalide -> reconnectez-vous).
 }
