@@ -1258,24 +1258,58 @@ function roleDisplayName(role) {
   return "Utilisateur";
 }
 
-function setupWorkspaceShell(role) {
+async function setupWorkspaceShell(requestedRole) {
   const currentUser = getSessionUser();
   const sidebar = document.querySelector(".sidebar");
   const topbar = document.querySelector(".topbar");
   if (!sidebar || !topbar) return;
 
-  // Construire les rôles accessibles selon l'URL (rôle authentifié)
-  const isAdminPageShell = window.location.pathname.includes("admin-dashboard");
-  const isTrainerPageShell = window.location.pathname.includes("trainer-dashboard");
-  const isParticipantPageShell = window.location.pathname.includes("participant-dashboard");
-  const authenticatedRoleShell = isAdminPageShell ? "admin" : isTrainerPageShell ? "trainer" : isParticipantPageShell ? "participant" : role;
-  const allowedRoles = authenticatedRoleShell === "admin" ? ["admin", "trainer", "participant"]
-                     : authenticatedRoleShell === "trainer" ? ["trainer", "participant"]
+  let trueDbRole = "participant"; // Rôle par défaut par sécurité
+
+  // 🔒 1. VÉRIFICATION SÉCURISÉE DEPUIS LA BASE DE DONNÉES (Supabase)
+  try {
+    const currentUid = getSessionUserId();
+    if (!currentUid) throw new Error("Aucun utilisateur connecté.");
+
+    const { data: profile, error } = await window.supabaseInstance
+      .from('profiles')
+      .select('role')
+      .eq('id', currentUid)
+      .single();
+
+    if (error) throw error;
+    if (profile && profile.role) {
+      trueDbRole = profile.role; // On récupère le vrai rôle stocké en DB
+    }
+  } catch (err) {
+    console.error("❌ Erreur de vérification de sécurité du rôle :", err);
+    // En cas d'échec de lecture DB, on peut rediriger vers la page de connexion
+    if (typeof showToast === 'function') {
+      showToast("Session non sécurisée. Redirection...", "danger");
+    }
+    return;
+  }
+
+  // 🔒 2. CONTRÔLE ET CORRECTION DES DROITS D'ACCÈS
+  // On définit les rôles auxquels cet utilisateur a légitimement droit
+  const allowedRoles = trueDbRole === "admin" ? ["admin", "trainer", "participant"]
+                     : trueDbRole === "trainer" ? ["trainer", "participant"]
                      : ["participant"];
+
+  // Si le rôle demandé (ex: 'admin' via l'URL) n'est pas dans ses droits réels DB, 
+  // on le force à basculer sur son vrai rôle DB pour éviter le contournement visuel.
+  let activeRole = requestedRole;
+  if (!allowedRoles.includes(requestedRole)) {
+    console.warn(`[Alerte Sécurité] Tentative d'accès non autorisée à l'espace '${requestedRole}'. Repli sur '${trueDbRole}'.`);
+    activeRole = trueDbRole;
+  }
+
   const hasRoleSwitcher = allowedRoles.length > 1;
-  const roleLabel = role === "trainer" ? "Espace formateur" : role === "participant" ? "Espace apprenant" : "Espace administrateur";
-  const brandLine = role === "trainer" ? "Teaching Studio" : "Learning Platform";
-  const navItems = role === "trainer" ? [
+  const roleLabel = activeRole === "trainer" ? "Espace formateur" : activeRole === "participant" ? "Espace apprenant" : "Espace administrateur";
+  const brandLine = activeRole === "trainer" ? "Teaching Studio" : "Learning Platform";
+
+  // 📂 3. CONFIGURATION DES MENUS (Avec l'ajout du bouton Groupes pour l'Admin)
+  const navItems = activeRole === "trainer" ? [
     ["dashboard", "Tableau de bord"],
     ["myteaching", "Mes formations"],
     ["courses", "Mes cours"],
@@ -1289,7 +1323,7 @@ function setupWorkspaceShell(role) {
     ["submissions", "Demandes"],
     ["studio", "Studio"],
     ["import", "Import"]
-  ] : role === "participant" ? [
+  ] : activeRole === "participant" ? [
     ["dashboard", "Tableau de bord"],
     ["catalog", "Catalogue"],
     ["courses", "Mes cours"],
@@ -1298,17 +1332,22 @@ function setupWorkspaceShell(role) {
     ["requests", "Demandes"],
     ["certificates", "Certificats"]
   ] : [
+    // Menu Administrateur
     ["dashboard", "Tableau de bord"],
     ["tracking", "Suivi global"],
     ["users", "Utilisateurs"],
+    ["groups", "Groupes"], // 🎯 AJOUT DE L'ONGLET GROUPES ICI
     ["catalog", "Catalogue"],
     ["requests", "Demandes"],
     ["settings", "Paramètres"]
   ];
 
+  // Nettoyage des classes d'état de la page
   document.body.classList.toggle("dashboard-only", false);
   document.body.classList.remove("participant-preview");
   sidebar.hidden = false;
+
+  // 📝 4. RENDU DE LA SIDEBAR
   sidebar.innerHTML = `
     <div class="brand">
       <div class="brand-mark">IC</div>
@@ -1317,35 +1356,37 @@ function setupWorkspaceShell(role) {
         <span>${brandLine}</span>
       </div>
     </div>
-    <div class="sidebar-section-title">${role === "trainer" ? "Formateur" : role === "participant" ? "Apprenant" : "Administration"}</div>
+    <div class="sidebar-section-title">${activeRole === "trainer" ? "Formateur" : activeRole === "participant" ? "Apprenant" : "Administration"}</div>
     <nav class="nav-list">
       ${navItems.map(([view, label], index) => {
         const uid2 = getSessionUserId();
-        const isParticipant = role === "participant";
-        const hasPendingNotif = isParticipant && view === "requests" && getUnseenNotifications(uid2).length > 0;
+        const isParticipant = activeRole === "participant";
+        const hasPendingNotif = isParticipant && view === "requests" && typeof getUnseenNotifications === 'function' && getUnseenNotifications(uid2).length > 0;
         const badge = hasPendingNotif ? ` <span style="display:inline-block;min-width:18px;height:18px;border-radius:999px;background:#e53e3e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;margin-left:6px;">${getUnseenNotifications(uid2).length}</span>` : "";
+        
         return `<a class="nav-item${index === 0 ? " active" : ""}" href="javascript:void(0)" data-view="${view}" onclick="navigate('${view}'); return false;" ${index === 0 ? 'aria-current="page"' : ""}>${label}${badge}</a>`;
       }).join("")}
     </nav>
   `;
 
- topbar.innerHTML = `
+  // 📝 5. RENDU DE LA TOPBAR (Avec le sélecteur de rôles basé sur la DB)
+  topbar.innerHTML = `
     <div>
       <div class="topbar-kicker">${roleLabel}</div>
-      <div class="topbar-title">${role === "trainer" ? "Programme Jeunes Talents - Formateur" : role === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents"}</div>
+      <div class="topbar-title">${activeRole === "trainer" ? "Programme Jeunes Talents - Formateur" : activeRole === "participant" ? "Programme Jeunes Talents - Apprenant" : "Programme Jeunes Talents"}</div>
     </div>
     <div class="topbar-actions">
       ${hasRoleSwitcher ? `
         <nav class="role-switcher" aria-label="Changer de tableau de bord">
           ${allowedRoles.map(accessRole => `
-            <button class="role-switcher-btn${accessRole === role ? " active" : ""}" type="button" onclick="switchWorkspaceRole('${accessRole}')" ${accessRole === role ? 'aria-current="page"' : ""}>
+            <button class="role-switcher-btn${accessRole === activeRole ? " active" : ""}" type="button" onclick="switchWorkspaceRole('${accessRole}')" ${accessRole === activeRole ? 'aria-current="page"' : ""}>
               ${roleDisplayName(accessRole)}
             </button>
           `).join("")}
         </nav>
       ` : ""}
       
-      <div class="user-chip" aria-label="${currentUser.role === "trainer" ? "Formateur connecté" : currentUser.role === "participant" ? "Participant connecté" : "Administrateur connecté"}">
+      <div class="user-chip" aria-label="${trueDbRole === "trainer" ? "Formateur connecté" : trueDbRole === "participant" ? "Participant connecté" : "Administrateur connecté"}">
         <span class="avatar">${currentUser.avatar || (currentUser.firstName?.[0] || "IC")}</span>
         <span class="user-name">${escapeHTML(`${currentUser.firstName || ""} ${currentUser.lastName || ""}`.trim() || sessionStorage.getItem("iccaCurrentUserEmail") || "Compte connecté")}</span>
         <span class="user-chip-chevron">▼</span>
@@ -1361,7 +1402,8 @@ function setupWorkspaceShell(role) {
       </div>
     </div>
   `;
-  document.title = role === "trainer" ? "Formateur - Tableau de bord" : role === "participant" ? "Utilisateur - Tableau de bord" : "Administration - Tableau de bord";
+
+  document.title = activeRole === "trainer" ? "Formateur - Tableau de bord" : activeRole === "participant" ? "Utilisateur - Tableau de bord" : "Administration - Tableau de bord";
 }
 
 function trainerCourseCard(course, uid) {
@@ -1852,49 +1894,257 @@ function renderAdminEnrollments() {
 }
 
 function renderAdminGroups() {
-  const selectedGroup = groups[0];
+  // 🎯 FORCE LA PRIORITÉ SUR LES DONNÉES SUPABASE
+  const currentGroups = window.groups || (typeof groups !== 'undefined' ? groups : []);
+  const selectedGroup = currentGroups.length > 0 ? currentGroups[0] : null;
+
   return `
     <div class="breadcrumb"><span>Administration</span><span>Groupes & accès</span></div>
-    <div class="page-header">
+    
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
         <h1 class="page-title">Groupes & accès</h1>
         <p class="page-subtitle">Gestion des cohortes et du verrouillage des modules.</p>
       </div>
+      <button onclick="openCreateGroupModal()" class="btn-primary" style="background: #a31526; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.2); transition: background 0.2s;">
+        + Nouveau groupe
+      </button>
     </div>
+    
     <div class="grid-main">
       <div class="table-wrap">
         <table class="table">
           <thead><tr><th>Groupe</th><th>Formation</th><th>Membres</th></tr></thead>
           <tbody>
-            ${groups.map(group => {
+            ${currentGroups.length > 0 ? currentGroups.map(group => {
               const course = getCourse(group.courseId);
               return `
                 <tr>
                   <td><strong>${escapeHTML(group.name)}</strong></td>
                   <td>${course ? escapeHTML(course.title) : "-"}</td>
-                  <td>${group.members.length}</td>
+                  <td>${group.members ? group.members.length : 0}</td>
                 </tr>
               `;
-            }).join("")}
+            }).join("") : '<tr><td colspan="3" style="text-align: center; color: #6b7280; padding: 20px;">Aucun groupe créé pour le moment. Cliquez sur "+ Nouveau groupe" pour commencer.</td></tr>'}
           </tbody>
         </table>
       </div>
+      
       <div class="card">
         <h3 class="card-title">${icon("layers", 18)} Accès du groupe</h3>
-        ${accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
-          <div class="activity-item">
-            <span class="activity-dot"></span>
-            <div class="activity-content">
-              <div><strong>${escapeHTML(rule.module)}</strong></div>
-              <div class="activity-time">${rule.open ? "Ouvert" : "Verrouillé"}</div>
+        ${selectedGroup ? 
+          accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
+            <div class="activity-item">
+              <span class="activity-dot"></span>
+              <div class="activity-content">
+                <div><strong>${escapeHTML(rule.module)}</strong></div>
+                <div class="activity-time">${rule.open ? "Ouvert" : "Verrouillé"}</div>
+              </div>
             </div>
-          </div>
-        `).join("")}
+          `).join("") 
+          : '<p style="color: #6b7280; font-size: 14px; margin: 0;">Aucun groupe sélectionné ou disponible.</p>'
+        }
       </div>
     </div>
   `;
 }
 
+async function loadGroupsFromSupabase() {
+  try {
+    const { data: dbGroups, error } = await window.supabaseInstance
+      .from('groups')
+      .select(`
+        id,
+        name,
+        course_id,
+        group_members (user_id)
+      `);
+
+    if (error) throw error;
+
+    const mappedGroups = dbGroups.map(g => ({
+      id: g.id,
+      name: g.name,
+      courseId: g.course_id, 
+      members: g.group_members || [] 
+    }));
+
+    // 1. On met à jour l'instance globale window
+    window.groups = mappedGroups;
+
+    // 2. Si ta variable locale 'groups' n'est pas un 'const', on la synchronise aussi
+    if (typeof groups !== 'undefined') {
+      try { groups = mappedGroups; } catch(e) { /* Sécurité si groups est un const */ }
+    }
+
+    console.log("📊 Groupes synchronisés depuis Supabase :", window.groups);
+  } catch (err) {
+    console.error("❌ Impossible de charger les groupes :", err.message);
+    window.groups = [];
+  }
+}
+
+window.openCreateGroupModal = async function() {
+  let coursesList = [];
+  let usersList = typeof users !== 'undefined' ? users : [];
+
+  try {
+    const { data: dbCourses } = await window.supabaseInstance.from('courses').select('id, title');
+    if (dbCourses) coursesList = dbCourses;
+    
+    if (usersList.length === 0) {
+      const { data: dbUsers } = await window.supabaseInstance.from('profiles').select('id, firstName, lastName, role').eq('role', 'participant');
+      if (dbUsers) usersList = dbUsers;
+    }
+  } catch (err) {
+    console.error("Erreur lors de la préparation des données :", err);
+  }
+
+  // Suppression d'une ancienne modale si elle existe déjà
+  const existingModal = document.getElementById('group-creation-modal');
+  if (existingModal) existingModal.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'group-creation-modal';
+  // Arrière-plan moderne avec floutage (Glassmorphism léger)
+  modal.style = "position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); display: flex; align-items: center; justify-content: center; z-index: 9999; animation: fadeIn 0.2s ease-out;";
+
+  modal.innerHTML = `
+    <div style="background: white; padding: 36px; border-radius: 16px; width: 520px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15); font-family: inherit; display: flex; flex-direction: column; gap: 20px;">
+      
+      <div>
+        <h3 style="font-size: 22px; font-weight: 700; color: #1e3a8a; margin: 0 0 6px 0;">Créer un nouveau groupe</h3>
+        <p style="font-size: 14px; color: #6b7280; margin: 0;">Configurez votre cohorte et assignez-y ses membres.</p>
+      </div>
+      
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #374151;">Nom de la cohorte / groupe</label>
+        <input type="text" id="new_group_name" placeholder="Ex: Cohorte Alpha 2026" style="width: 100%; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 8px; box-sizing: border-box; font-size: 15px; transition: border 0.2s, box-shadow: 0.2s; outline: none; background: #f9fafb;" onfocus="this.style.border='1px solid #1e3a8a'; this.style.boxShadow='0 0 0 3px rgba(30, 58, 138, 0.1)'; this.style.background='white';" onblur="this.style.border='1px solid #e5e7eb'; this.style.boxShadow='none'; this.style.background='#f9fafb';">
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #374151;">Associer à une formation</label>
+        <select id="new_group_course" style="width: 100%; padding: 12px 14px; border: 1px solid #e5e7eb; border-radius: 8px; font-size: 15px; background: #f9fafb; outline: none; cursor: pointer; transition: border 0.2s;" onfocus="this.style.border='1px solid #1e3a8a';" onblur="this.style.border='1px solid #e5e7eb';">
+          <option value="">Aucune formation spécifique</option>
+          ${coursesList.map(c => `<option value="${c.id}">${c.title}</option>`).join('')}
+        </select>
+      </div>
+
+      <div>
+        <label style="display: block; font-size: 14px; font-weight: 600; margin-bottom: 8px; color: #374151;">Sélectionner les apprenants</label>
+        <div style="border: 1px solid #e5e7eb; border-radius: 10px; max-height: 200px; overflow-y: auto; padding: 6px; background: #ffffff; display: flex; flex-direction: column; gap: 4px;">
+          ${usersList.filter(u => u.role === 'participant').map(u => `
+            <label style="display: flex; align-items: center; padding: 10px 12px; border-radius: 6px; cursor: pointer; font-size: 14px; transition: background 0.2s; color: #4b5563;" onmouseover="this.style.background='#f3f4f6'" onmouseout="this.style.background='transparent'">
+              <input type="checkbox" name="group_members_checkboxes" value="${u.id}" style="margin-right: 12px; width: 18px; height: 18px; accent-color: #a31526; cursor: pointer;">
+              <span style="font-weight: 500; color: #1f2937;">${u.firstName || ''} ${u.lastName || 'Utilisateur'}</span>
+            </label>
+          `).join('')}
+          ${usersList.filter(u => u.role === 'participant').length === 0 ? '<p style="color:#9ca3af; font-size:13px; text-align:center; margin:16px 0;">Aucun apprenant disponible</p>' : ''}
+        </div>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 8px;">
+        <button onclick="document.getElementById('group-creation-modal').remove()" style="background: #f3f4f6; color: #4b5563; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='#e5e7eb'" onmouseout="this.style.background='#f3f4f6'">Annuler</button>
+        <button id="btn-confirm-create-group" onclick="submitNewGroup()" style="background: #a31526; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.15); transition: background 0.2s;" onmouseover="this.style.background='#870f1e'" onmouseout="this.style.background='#a31526'">Enregistrer le groupe</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+};
+
+window.submitNewGroup = async function() {
+  const nameInput = document.getElementById('new_group_name');
+  const courseSelect = document.getElementById('new_group_course');
+  const btn = document.getElementById('btn-confirm-create-group');
+  
+  if (!nameInput || !courseSelect || !btn) return;
+  
+  const groupName = nameInput.value.trim();
+  const courseId = courseSelect.value;
+  
+  // Validation minimale en Front
+  if (!groupName) {
+    alert("Veuillez donner un nom à votre groupe.");
+    return;
+  }
+  
+  // Collecte des IDs des membres cochés
+  const checkboxes = document.querySelectorAll('input[name="group_members_checkboxes"]:checked');
+  const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+
+  // Verrouillage du bouton
+  btn.disabled = true;
+  btn.innerText = "Synchronisation DB...";
+
+  try {
+    // 1. INSERTION DU GROUPE (Table groups)
+    const { data: createdGroup, error: groupError } = await window.supabaseInstance
+      .from('groups')
+      .insert({
+        name: groupName,
+        course_id: courseId ? courseId : null 
+      })
+      .select()
+      .single(); 
+
+    if (groupError) throw new Error(`Erreur Création Groupe: ${groupError.message}`);
+    console.log("✅ Groupe créé en DB avec succès ! ID =", createdGroup.id);
+
+    // 2. INSERTION DES MEMBRES (Table group_members)
+    if (selectedUserIds.length > 0) {
+      const membersPayload = selectedUserIds.map(userId => ({
+        group_id: createdGroup.id,
+        user_id: userId
+      }));
+
+      const { error: membersError } = await window.supabaseInstance
+        .from('group_members')
+        .insert(membersPayload);
+
+      if (membersError) throw new Error(`Erreur d'attribution des membres: ${membersError.message}`);
+      console.log(`✅ ${selectedUserIds.length} membres associés au groupe avec succès !`);
+    }
+
+    // 3. TOUT EST OK -> MISE À JOUR DU FRONT
+    if (typeof showToast === 'function') {
+      showToast('Le groupe a été créé et synchronisé avec succès !', 'success');
+    } else {
+      alert('Groupe enregistré avec succès !');
+    }
+
+    // Fermeture de la modale
+    const modal = document.getElementById('group-creation-modal');
+    if (modal) modal.remove();
+
+    // =========================================================
+    // 🔄 SECTION MODIFIÉE : RAFRAÎCHISSEMENT ASYNCHRONE STRICTE
+    // =========================================================
+    if (typeof navigate === 'function') {
+      // On ajoute "await" ici pour forcer l'attente du rechargement de la DB avant de ré-afficher la page
+      await navigate('groups'); 
+    } else if (typeof renderAdminGroups === 'function') {
+      // Secours si tu appelles directement la fonction sans passer par le routeur
+      if (typeof loadGroupsFromSupabase === 'function') {
+        await loadGroupsFromSupabase();
+      }
+      const mainContent = document.getElementById("main-content"); // Remplace par ton ID de conteneur si nécessaire
+      if (mainContent) mainContent.innerHTML = renderAdminGroups();
+    }
+
+  } catch (err) {
+    // EN CAS D'ÉCHEC : On débloque le bouton pour permettre de réessayer
+    console.error("❌ ÉCHEC DE CRÉATION DU GROUPE :", err.message);
+    btn.disabled = false;
+    btn.innerText = "Enregistrer le groupe";
+    
+    if (typeof showToast === 'function') {
+      showToast(err.message, 'danger');
+    } else {
+      alert(`Erreur Supabase : ${err.message}`);
+    }
+  }
+};
 function renderAdminPayments() {
   const totalPaid = payments.filter(payment => payment.status === "paid").reduce((sum, payment) => sum + payment.amount, 0);
   return `
@@ -3703,19 +3953,34 @@ function showToast(message, type = "info") {
 // ACTIONS
 // =============================================================================
 
-function navigate(viewName) {
+async function navigate(viewName) {
   const role = currentWorkspaceRole || getWorkspaceRole();
   const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
   const trainerViews = ["dashboard", "myteaching", "courses", "calendar", "evaluations", "corrections", "remises", "participants", "tracking", "preview", "submissions", "studio", "import"];
   const participantViews = ["dashboard", "catalog", "courses", "modules", "resources", "quiz", "requests", "assignments", "calendar", "certificates"];
+  
   const allowed = role === "trainer" ? trainerViews : role === "participant" ? participantViews : adminViews;
+  
   if (!allowed.includes(viewName)) {
     showToast("Cette section est en cours de préparation.", "info");
     return;
   }
+
+  // =========================================================
+  // 🔄 INTERCEPTION ET CHARGEMENT DYNAMIQUE DEPUIS SUPABASE
+  // =========================================================
+  if (viewName === "groups") {
+    // Si la fonction de chargement existe, on attend qu'elle finisse de remplir window.groups
+    if (typeof loadGroupsFromSupabase === 'function') {
+      // Optionnel : Tu peux injecter un mini spinner temporaire dans ton conteneur principal 
+      // pendant la milliseconde de chargement pour un effet ultra fluide (ex: Shimmer effect)
+      await loadGroupsFromSupabase();
+    }
+  }
+
+  // Le rendu se déclenche uniquement quand les données de la DB sont prêtes !
   renderWorkspacePage(role, viewName);
 }
-
 function switchWorkspaceRole(role) {
   const allowedRoles = getAccessibleWorkspaceRoles();
   if (!allowedRoles.includes(role)) {
