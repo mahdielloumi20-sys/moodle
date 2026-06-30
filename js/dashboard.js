@@ -7,6 +7,56 @@ let certificates = [];
 let activityLog = [];
 let groups = [];
 let accessRules = [];
+let availableGroups = []; // Stockera la liste globale des groupes
+
+// 1. Charger tous les groupes existants sur la plateforme
+async function fetchAvailableGroups() {
+  try {
+    const { data, error } = await window.supabaseInstance
+      .from('groups')
+      .select('id, name');
+    
+    if (error) throw error;
+    availableGroups = data || [];
+  } catch (err) {
+    console.error("Erreur lors de la récupération des groupes :", err);
+  }
+}
+
+// 2. Exemple de modification de ton fetch d'utilisateurs pour inclure le groupe
+async function fetchUsers() {
+  try {
+    // On sélectionne le profil ET on va chercher le nom du groupe associé via la table de jonction
+    const { data, error } = await window.supabaseInstance
+      .from('profiles')
+      .select(`
+        id,
+        role,
+        full_name,
+        email,
+        group_members (
+          group_id,
+          groups ( name )
+        )
+      `);
+
+    if (error) throw error;
+
+    // Transformation des données pour aplatir la structure du groupe
+    users = data.map(u => ({
+      id: u.id,
+      role: u.role,
+      fullName: u.full_name || "Utilisateur sans nom",
+      email: u.email || "",
+      // Si l'utilisateur est dans un groupe, on prend le premier trouvé, sinon "Aucun"
+      groupName: u.group_members?.[0]?.groups?.name || "Aucun",
+      groupId: u.group_members?.[0]?.group_id || "none"
+    }));
+
+  } catch (err) {
+    console.error("Erreur chargement utilisateurs :", err);
+  }
+}
 
 // ─── Persistance locale des demandes (mode démo sans Supabase) ─────────────
 const REQUESTS_STORAGE_KEY = "icca_enrollment_requests";
@@ -1440,7 +1490,7 @@ function renderAdminUsers() {
     <div class="page-header">
       <div>
         <h1 class="page-title">Utilisateurs</h1>
-        <p class="page-subtitle">${users.length} comptes actifs sur la plateforme.</p>
+        <p class="page-subtitle">${users.length} comptes actifs sur la mentale.</p>
       </div>
       <div class="page-actions">
         <select class="form-control" style="min-width:220px;" onchange="appState.usersRoleFilter = this.value; renderAdminPage('users');">
@@ -1455,18 +1505,65 @@ function renderAdminUsers() {
     </div>
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>Utilisateur</th><th>Rôle</th><th>Formation(s)</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Utilisateur</th>
+            <th>Rôle</th>
+            <th>Groupe</th>
+            <th>Formation(s)</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           ${filteredUsers.map(user => {
-            const enrollCount = enrollments.filter(enrollment => enrollment.userId === user.id).length;
+            const fName = user.firstName || user.first_name || "";
+            const lName = user.lastName || user.last_name || "";
+            const email = user.email || "";
+            
+            // Sécurité DB : Récupération des données du groupe (camelCase ou snake_case)
+            const groupName = user.groupName || user.group_name || "Aucun";
+            const groupId = user.groupId || user.group_id || "none";
+            
+            const enrollCount = enrollments.filter(enrollment => 
+              enrollment.userId === user.id || enrollment.user_id === user.id
+            ).length;
+            
             const roleClass = user.role === "admin" ? "badge badge--danger" : user.role === "trainer" ? "badge badge--info" : "badge badge--success";
             const roleLabel = user.role === "admin" ? "Admin" : user.role === "trainer" ? "Formateur" : "Participant";
+            
+            // Étape 2b : Style premium pour le badge de groupe
+            const groupStyle = groupName === "Aucun" || groupName === "none"
+              ? "background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb;" // Style gris sobre si sans groupe
+              : "background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;"; // Style violet premium si rattaché à un groupe
+            
             return `
               <tr>
-                <td><div class="person-cell"><span class="avatar">${user.avatar}</span><strong>${escapeHTML(`${user.firstName} ${user.lastName}`)}</strong></div></td>
+                <td>
+                  <div class="person-cell">
+                    <span class="avatar">${user.avatar ? user.avatar : (fName ? fName[0] : "IC")}</span>
+                    <div style="display: flex; flex-direction: column; gap: 2px; align-items: flex-start;">
+                      <strong>${escapeHTML(`${fName} ${lName}`.trim())}</strong>
+                      ${email ? `<span style="font-size: 11px; color: #718096; font-weight: 400; line-height: 1.2;">${escapeHTML(email)}</span>` : ""}
+                    </div>
+                  </div>
+                </td>
                 <td><span class="${roleClass}">${roleLabel}</span></td>
+                
+                <td>
+                  <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; ${groupStyle}">
+                    ${escapeHTML(groupName)}
+                  </span>
+                </td>
+                
                 <td>${enrollCount}</td>
-                <td class="td-actions"><button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation du compte ${escapeHTML(user.firstName)}', 'info')">${icon("eye", 13)} Voir</button></td>
+                <td class="td-actions">
+                  <button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation du compte ${escapeHTML(fName)}', 'info')">
+                    ${icon("eye", 13)} Voir
+                  </button>
+                  <button class="btn btn-sm btn-primary" style="margin-left: 6px;" onclick="openEditRoleModal('${user.id}', '${user.role}', '${groupId}')">
+                    Modifier
+                  </button>
+                </td>
               </tr>
             `;
           }).join("")}
@@ -1476,6 +1573,156 @@ function renderAdminUsers() {
   `;
 }
 
+window.openEditRoleModal = function(userId, currentRole, currentGroupId) {
+  // Génération dynamique des options de groupe
+  const groupOptions = availableGroups.map(g => `
+    <option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>
+  `).join('');
+
+  const modalHtml = `
+    <div id="role-modal" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(15, 23, 42, 0.3);
+      backdrop-filter: blur(4px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    ">
+      <div style="
+        width: 100%;
+        max-width: 420px;
+        background: #ffffff;
+        border-radius: 16px;
+        padding: 28px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border: 1px solid #f1f5f9;
+        animation: modalPopIn 0.2s ease-out;
+      ">
+        <h3 style="margin: 0 0 4px 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Modifier les accès</h3>
+        <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: #64748b;">Ajustez le rôle et l'affectation de l'apprenant.</p>
+        
+        <div style="margin-bottom: 18px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Rôle sur la plateforme</label>
+          <select id="popup_role_select" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            <option value="participant" ${currentRole === 'participant' ? 'selected' : ''}>Participant</option>
+            <option value="trainer" ${currentRole === 'trainer' ? 'selected' : ''}>Formateur</option>
+            <option value="admin" ${currentRole === 'admin' ? 'selected' : ''}>Admin</option>
+          </select>
+        </div>
+
+        <div style="margin-bottom: 28px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Groupe d'étude</label>
+          <select id="popup_group_select" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            <option value="none" ${currentGroupId === 'none' ? 'selected' : ''}>Pas de groupe</option>
+            ${groupOptions}
+          </select>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button class="btn btn-secondary" style="padding: 8px 16px; border-radius: 8px;" onclick="document.getElementById('role-modal').remove()">Annuler</button>
+          <button id="btn-save-role" class="btn btn-primary" style="padding: 8px 16px; border-radius: 8px; background: #991b1b; border: none;" onclick="window.saveUserRoleAndGroup('${userId}')">Enregistrer</button>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      @keyframes modalPopIn {
+        from { transform: scale(0.95); opacity: 0; }
+        to { transform: scale(1); opacity: 1; }
+      }
+    </style>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+window.saveUserRoleAndGroup = async function(userId) {
+  const selectRole = document.getElementById('popup_role_select');
+  const selectGroup = document.getElementById('popup_group_select');
+  const btn = document.getElementById('btn-save-role');
+  if (!selectRole || !selectGroup || !btn) return;
+  
+  const newRole = selectRole.value;
+  const newGroupId = selectGroup.value;
+  const newGroupName = selectGroup.options[selectGroup.selectedIndex].text;
+  
+  // Blocage visuel du bouton pendant l'attente de la DB
+  btn.disabled = true;
+  btn.innerText = "Enregistrement en base de données...";
+
+  try {
+    // 1. ÉCRITURE DU RÔLE (Table profiles)
+    const { error: roleError } = await window.supabaseInstance
+      .from('profiles')
+      .update({ role: newRole })
+      .eq('id', userId);
+
+    // Si Supabase renvoie une erreur, on stope DIRECTEMENT ici
+    if (roleError) throw new Error(`Erreur Table Profiles: ${roleError.message}`);
+
+    // 2. NETTOYAGE DU GROUPE PRÉCÉDENT (Table group_members)
+    const { error: deleteError } = await window.supabaseInstance
+      .from('group_members')
+      .delete()
+      .eq('user_id', userId);
+
+    if (deleteError) throw new Error(`Erreur Nettoyage Groupe: ${deleteError.message}`);
+
+    // 3. INSCRIPTION DANS LE NOUVEAU GROUPE (Si ce n'est pas "none")
+    if (newGroupId !== "none") {
+      const { error: insertError } = await window.supabaseInstance
+        .from('group_members')
+        .insert({ 
+          user_id: userId, 
+          group_id: newGroupId 
+        });
+
+      if (insertError) throw new Error(`Erreur Insertion Groupe: ${insertError.message}`);
+    }
+
+    // ==========================================
+    // LE FRONT NE SE MET À JOUR QU'ICI (SUCCÈS DB GARANTI)
+    // ==========================================
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      users[userIndex].role = newRole;
+      users[userIndex].groupName = newGroupId === "none" ? "Aucun" : newGroupName;
+      users[userIndex].groupId = newGroupId;
+    }
+
+    // On ferme la modale uniquement parce que tout est stocké en DB
+    document.getElementById('role-modal').remove();
+    
+    if (typeof showToast === 'function') {
+      showToast('Données synchronisées avec la base de données !', 'success');
+    }
+
+    // Rafraîchissement du tableau HTML
+    if (typeof renderAdminPage === 'function') {
+      renderAdminPage('users');
+    }
+
+  } catch (err) {
+    // ==========================================
+    // EN CAS D'ÉCHEC : LE FRONT NE BOUGE PAS
+    // ==========================================
+    console.error("❌ ÉCHEC SYNCHRONISATION DATABASE :", err.message);
+    
+    // On débloque le bouton pour te laisser corriger ou réessayer
+    btn.disabled = false;
+    btn.innerText = "Enregistrer";
+    
+    // On affiche l'erreur réelle dans l'interface pour savoir ce qui bloque
+    if (typeof showToast === 'function') {
+      showToast(err.message, 'danger');
+    } else {
+      alert(`Erreur de synchronisation : ${err.message}`);
+    }
+  }
+};
 function renderAdminRoles() {
   const permissions = [
     ["Créer un cours", true, true, false],
