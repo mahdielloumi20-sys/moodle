@@ -1,4 +1,4 @@
--- Run this in the Supabase SQL editor.
+﻿-- Run this in the Supabase SQL editor.
 -- It creates a profiles table linked to auth.users and stores the role used by the LMS.
 
 create table if not exists public.profiles (
@@ -103,5 +103,13 @@ $$;
 revoke all on function public.admin_list_profiles() from public;
 grant execute on function public.admin_list_profiles() to authenticated;
 
-comment on table public.profiles is 'Profile LMS lié à auth.users. Le rôle contrôle la redirection après login.';
-comment on column public.profiles.role is 'Valeurs autorisées: admin, trainer, participant.';
+comment on table public.profiles is 'Profile LMS liÃ© Ã  auth.users. Le rÃ´le contrÃ´le la redirection aprÃ¨s login.';
+comment on column public.profiles.role is 'Valeurs autorisÃ©es: admin, trainer, participant.';
+
+-- Séances formateur : liste par formation et rattachement des cours ajoutés.
+alter table if exists public.courses
+add column if not exists seances jsonb not null default '[{"id":"s1","label":"S\u00e9ance 1"}]'::jsonb;
+
+alter table if exists public.course_contents
+add column if not exists seance_id text not null default 's1';
+

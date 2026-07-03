@@ -34,6 +34,11 @@ function openAddModuleModal(formationId, type) {
       fileAcceptTypes = ".xlsx,.xls,.csv";
       helpText = "Formats acceptés : Excel (.xlsx, .xls) ou CSV (.csv)";
       break;
+    case "zip":
+      titleText = "Importer un Fichier ZIP";
+      fileAcceptTypes = ".zip";
+      helpText = "Le titre du cours sera repris du nom du fichier ZIP si vous ne le modifiez pas.";
+      break;
   }
 
   const body = `
@@ -41,7 +46,7 @@ function openAddModuleModal(formationId, type) {
       <label for="mod_title" style="font-weight:600;font-size:13px;display:block;margin-bottom:6px;">
         Titre du cours <span style="color:var(--danger,#e53e3e);">*</span>
       </label>
-      <input type="text" id="mod_title" class="form-control" placeholder="ex : Chapitre 1 : Les fondamentaux" style="width:100%;" autofocus>
+      <input type="text" id="mod_title" class="form-control" placeholder="${type === "zip" ? "Nom du fichier ZIP" : "ex : Chapitre 1 : Les fondamentaux"}" style="width:100%;" autofocus>
     </div>
     
     <div class="form-group" style="margin-bottom:16px;">
@@ -55,7 +60,7 @@ function openAddModuleModal(formationId, type) {
       <label for="mod_file" style="font-weight:600;font-size:13px;display:block;margin-bottom:6px;">
         Sélectionner le fichier à importer <span style="color:var(--danger,#e53e3e);">*</span>
       </label>
-      <input type="file" id="mod_file" class="form-control" accept="${fileAcceptTypes}" style="width:100%; padding:8px;">
+      <input type="file" id="mod_file" class="form-control" accept="${fileAcceptTypes}" style="width:100%; padding:8px;"${type === "zip" ? ` onchange="if(this.files && this.files[0]){ const inputTitle = document.getElementById('mod_title'); if (inputTitle) inputTitle.value = this.files[0].name.replace(/\\.zip$/i, ''); }"` : ""}>
       <small style="display:block; color:var(--text-muted); font-size:11px; margin-top:4px;">${helpText}</small>
     </div>
     
@@ -81,6 +86,236 @@ function openAddModuleModal(formationId, type) {
        Importer et créer le cours
      </button>`
   );
+}
+
+function getZipBaseName(fileName) {
+  return String(fileName || "").replace(/\.zip$/i, "");
+}
+
+function inferZipEntryKind(fileName) {
+  const ext = String(fileName || "").split(".").pop().toLowerCase();
+  if (["html", "htm"].includes(ext)) return "html";
+  if (ext === "pdf") return "document";
+  if (["md", "markdown"].includes(ext)) return "markdown";
+  if (["txt", "rtf"].includes(ext)) return "text";
+  if (["xls", "xlsx", "csv"].includes(ext)) return "excel";
+  if (["jpg", "jpeg", "png", "gif", "webp", "svg"].includes(ext)) return "image";
+  if (["mp4", "webm", "ogg", "mov"].includes(ext)) return "video";
+  if (["json", "xml"].includes(ext)) return "json";
+  return "file";
+}
+
+function zipEntryTypeLabel(kind) {
+  const labels = {
+    html: "Page HTML",
+    document: "PDF",
+    markdown: "Markdown",
+    text: "Texte",
+    excel: "Excel",
+    image: "Image",
+    video: "Vidéo",
+    json: "JSON",
+    file: "Fichier"
+  };
+  return labels[kind] || "Fichier";
+}
+
+function zipEntryTypeIcon(kind) {
+  const icons = {
+    html: "zap",
+    document: "fileText",
+    markdown: "fileText",
+    text: "fileText",
+    excel: "grid",
+    image: "image",
+    video: "play",
+    json: "settings",
+    file: "fileText"
+  };
+  return icon(icons[kind] || "fileText", 14);
+}
+
+async function readTopLevelZipEntries(file) {
+  const zip = await window.JSZip.loadAsync(file);
+  const entries = [];
+
+  for (const [path, entry] of Object.entries(zip.files || {})) {
+    if (!entry || entry.dir) continue;
+
+    const kind = inferZipEntryKind(path);
+    const displayName = path.split(/[/\\]/).pop() || path;
+    entries.push({
+      path,
+      name: displayName,
+      kind,
+      label: zipEntryTypeLabel(kind),
+      size: entry._data?.uncompressedSize || entry._data?.compressedSize || null
+    });
+  }
+
+  entries.sort((a, b) => a.name.localeCompare(b.name, "fr") || a.path.localeCompare(b.path, "fr"));
+  return entries;
+}
+
+async function readTopLevelZipEntriesFromUrl(archiveUrl) {
+  const response = await fetch(archiveUrl);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const archiveBlob = await response.blob();
+  return readTopLevelZipEntries(archiveBlob);
+}
+
+function findZipEntryFromArchive(zip, entryRef) {
+  if (!entryRef) return null;
+  if (zip.file(entryRef)) return zip.file(entryRef);
+
+  const wantedName = String(entryRef).split(/[/\\]/).pop();
+  for (const [path, entry] of Object.entries(zip.files || {})) {
+    if (!entry || entry.dir) continue;
+    const currentName = path.split(/[/\\]/).pop();
+    if (currentName === wantedName) return entry;
+  }
+  return null;
+}
+
+async function previewZipEntryFlexible(formationId, moduleId, entryRef) {
+  const modules = loadFormationModules(formationId);
+  const module = modules.find(mod => mod.id === moduleId);
+  if (!module || module.type !== "zip") {
+    showToast("Cours ZIP introuvable.", "danger");
+    return;
+  }
+
+  const archiveUrl = resolveZipArchiveUrl(module);
+  if (!archiveUrl) {
+    showToast("Archive ZIP introuvable.", "danger");
+    return;
+  }
+
+  try {
+    const response = await fetch(archiveUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const archiveBlob = await response.blob();
+    const zip = await window.JSZip.loadAsync(archiveBlob);
+    const entry = findZipEntryFromArchive(zip, entryRef);
+
+    if (!entry) {
+      showToast("Fichier introuvable dans l'archive ZIP.", "danger");
+      return;
+    }
+
+    const entryName = entry.name || String(entryRef);
+    const kind = inferZipEntryKind(entryName);
+    const title = `${module.title} • ${entryName}`;
+    let body = "";
+
+    if (kind === "html") {
+      const html = await entry.async("text");
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      body = `<iframe src="${url}" style="width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:12px;background:#fff;"></iframe>`;
+    } else if (kind === "document") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<iframe src="${url}" style="width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:12px;background:#fff;"></iframe>`;
+    } else if (kind === "image") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<div style="text-align:center;"><img src="${url}" alt="${escapeHTML(entryName)}" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;"></div>`;
+    } else if (kind === "video") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<video controls autoplay style="width:100%;max-height:70vh;border-radius:12px;border:1px solid #e2e8f0;background:#000;"><source src="${url}"></video>`;
+    } else {
+      const text = await entry.async("text");
+      body = `<pre style="white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;max-height:70vh;overflow:auto;margin:0;">${escapeHTML(text)}</pre>`;
+    }
+
+    showModal(
+      `<span style="display:flex;align-items:center;gap:8px;">${zipEntryTypeIcon(kind)} ${escapeHTML(entryName)}</span>`,
+      body,
+      `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button>`
+    );
+  } catch (err) {
+    console.error("[previewZipEntryFlexible] Erreur :", err.message);
+    showToast("Impossible d'ouvrir ce fichier ZIP.", "danger");
+  }
+}
+
+function resolveZipArchiveUrl(module) {
+  if (!module) return "";
+  if (module.zipArchiveUrl) return module.zipArchiveUrl;
+  if (module.fileData && typeof module.fileData === "string") {
+    try {
+      const parsed = JSON.parse(module.fileData);
+      if (parsed && typeof parsed === "object" && parsed.archiveUrl) return parsed.archiveUrl;
+    } catch {}
+    return module.fileData;
+  }
+  return "";
+}
+
+async function previewZipEntry(formationId, moduleId, entryName) {
+  const modules = loadFormationModules(formationId);
+  let module = modules.find(mod => mod.id === moduleId);
+  if (!module || module.type !== "zip") {
+    showToast("Cours ZIP introuvable.", "danger");
+    return;
+  }
+
+  const archiveUrl = resolveZipArchiveUrl(module);
+  if (!archiveUrl) {
+    showToast("Archive ZIP introuvable.", "danger");
+    return;
+  }
+
+  try {
+    const response = await fetch(archiveUrl);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const archiveBlob = await response.blob();
+    const zip = await window.JSZip.loadAsync(archiveBlob);
+    const entry = zip.file(entryName);
+
+    if (!entry) {
+      showToast("Fichier introuvable dans l'archive ZIP.", "danger");
+      return;
+    }
+
+    const kind = inferZipEntryKind(entryName);
+    const ext = entryName.split(".").pop().toLowerCase();
+    const title = `${module.title} • ${entryName}`;
+    let body = "";
+
+    if (kind === "html") {
+      const html = await entry.async("text");
+      const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      body = `<iframe src="${url}" style="width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:12px;background:#fff;"></iframe>`;
+    } else if (kind === "document") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<iframe src="${url}" style="width:100%;height:70vh;border:1px solid #e2e8f0;border-radius:12px;background:#fff;"></iframe>`;
+    } else if (kind === "image") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<div style="text-align:center;"><img src="${url}" alt="${escapeHTML(entryName)}" style="max-width:100%;height:auto;border-radius:12px;border:1px solid #e2e8f0;"></div>`;
+    } else if (kind === "video") {
+      const blob = await entry.async("blob");
+      const url = URL.createObjectURL(blob);
+      body = `<video controls autoplay style="width:100%;max-height:70vh;border-radius:12px;border:1px solid #e2e8f0;background:#000;"><source src="${url}"></video>`;
+    } else {
+      const text = await entry.async("text");
+      body = `<pre style="white-space:pre-wrap;word-break:break-word;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:16px;max-height:70vh;overflow:auto;margin:0;">${escapeHTML(text)}</pre>`;
+    }
+
+    showModal(
+      `<span style="display:flex;align-items:center;gap:8px;">${zipEntryTypeIcon(kind)} ${escapeHTML(entryName)}</span>`,
+      body,
+      `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button>`
+    );
+  } catch (err) {
+    console.error("[previewZipEntry] Erreur :", err.message);
+    showToast("Impossible d'ouvrir ce fichier ZIP.", "danger");
+  }
 }
 
 // Récupère (ou crée) une section par défaut pour un cours donné.
@@ -132,6 +367,7 @@ async function confirmAddOtherModule() {
   const fileInput = document.getElementById("mod_file");
   const allowDownload = !!document.getElementById("mod_allow_download")?.checked;
   const errorEl = document.getElementById("mod_error");
+  const selectedSeanceId = getTrainerSelectedSeanceId(getCourseAny(formationId));
 
   // 🛡️ SÉCURITÉ : Vérification du format de l'ID avant de requêter Supabase
   if (!formationId || !isValidUUID(formationId)) {
@@ -157,6 +393,13 @@ async function confirmAddOtherModule() {
   }
 
   const file = fileInput.files[0];
+  const finalTitle = title || (type === "zip" ? getZipBaseName(file.name) : "");
+
+  if (!finalTitle) {
+    if (errorEl) { errorEl.textContent = "Le titre est obligatoire."; errorEl.style.display = "block"; }
+    document.getElementById("mod_title")?.focus();
+    return;
+  }
 
   try {
     showToast("Vérification de la section...", "info");
@@ -173,6 +416,18 @@ async function confirmAddOtherModule() {
         errorEl.style.display = "block";
       }
       return;
+    }
+
+    let zipFiles = [];
+    let storedContent = "";
+    if (type === "zip") {
+      if (!window.JSZip) {
+        throw new Error("La librairie JSZip n'est pas disponible.");
+      }
+      zipFiles = await readTopLevelZipEntries(file);
+      if (zipFiles.length === 0) {
+        throw new Error("Le ZIP ne contient aucun fichier exploitable à la racine. Les dossiers imbriqués sont ignorés pour le moment.");
+      }
     }
 
     showToast("Téléchargement du fichier vers Supabase Storage...", "info");
@@ -192,6 +447,14 @@ async function confirmAddOtherModule() {
       .from('course-attachments')
       .getPublicUrl(uniquePath);
 
+    storedContent = publicUrl;
+    if (type === "zip") {
+      storedContent = JSON.stringify({
+        archiveUrl: publicUrl,
+        files: zipFiles
+      });
+    }
+
     showToast("Enregistrement du module dans la base de données...", "info");
 
     const { data: insertedRows, error: dbError } = await window.supabaseInstance
@@ -199,11 +462,12 @@ async function confirmAddOtherModule() {
       .insert([
         {
           section_id: sectionId, 
-          title: title,
+          title: finalTitle,
           content_type: type,     
-          content: publicUrl,     
+          content: storedContent,     
           description: desc || null,
-          allow_download: allowDownload
+          allow_download: allowDownload,
+          seance_id: selectedSeanceId
         }
       ])
       .select();
@@ -215,12 +479,15 @@ async function confirmAddOtherModule() {
     const newModule = {
       id: insertedRows[0].id, 
       type: type,
-      title,
+      title: finalTitle,
       desc: desc || null, 
       fileName: file.name,
       fileSize: (file.size / 1024).toFixed(1) + " KB",
-      fileData: publicUrl,
+      fileData: type === "zip" ? storedContent : publicUrl,
+      zipArchiveUrl: type === "zip" ? publicUrl : undefined,
+      zipFiles: type === "zip" ? zipFiles : undefined,
       allowDownload: allowDownload,
+      seanceId: selectedSeanceId,
       addedAt: new Date().toISOString()
     };
 
@@ -229,9 +496,10 @@ async function confirmAddOtherModule() {
       existing.push(newModule);
       saveFormationModules(formationId, existing);
     }
+    await syncCourseModulesToSupabase(formationId, newModule);
 
     closeModal();
-    showToast(`Le module "${title}" a été enregistré avec succès.`, "success");
+    showToast(`Le module "${finalTitle}" a été enregistré avec succès.`, "success");
 
     if (typeof renderWorkspacePage === 'function') {
       renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), "preview");
@@ -260,9 +528,29 @@ async function repairModuleFromSupabase(formationId, moduleId, staleModule) {
     if (error) throw error;
     if (!row) return null;
 
-    const guessedFileName = row.content
-      ? decodeURIComponent(row.content.split('/').pop().split('?')[0])
-      : (staleModule?.fileName || row.title || "fichier");
+    const guessedFileName = row.content_type === "zip"
+      ? (staleModule?.fileName || `${row.title || "archive"}.zip`)
+      : (row.content
+        ? decodeURIComponent(row.content.split('/').pop().split('?')[0])
+        : (staleModule?.fileName || row.title || "fichier"));
+
+    let fileData = row.content;
+    let zipArchiveUrl = staleModule?.zipArchiveUrl || "";
+    let zipFiles = Array.isArray(staleModule?.zipFiles) ? staleModule.zipFiles : [];
+
+    if (row.content_type === "zip" && row.content) {
+      try {
+        const parsed = JSON.parse(row.content);
+        if (parsed && typeof parsed === "object") {
+          zipArchiveUrl = parsed.archiveUrl || zipArchiveUrl || "";
+          zipFiles = Array.isArray(parsed.files) ? parsed.files : zipFiles;
+          fileData = JSON.stringify({
+            archiveUrl: zipArchiveUrl,
+            files: zipFiles
+          });
+        }
+      } catch {}
+    }
 
     const repaired = {
       id: row.id,
@@ -271,8 +559,11 @@ async function repairModuleFromSupabase(formationId, moduleId, staleModule) {
       desc: row.description || null,
       fileName: guessedFileName,
       fileSize: staleModule?.fileSize || null,
-      fileData: row.content,
+      fileData,
+      zipArchiveUrl: row.content_type === "zip" ? zipArchiveUrl : undefined,
+      zipFiles: row.content_type === "zip" ? zipFiles : undefined,
       allowDownload: !!row.allow_download,
+      seanceId: row.seance_id || staleModule?.seanceId || "s1",
       addedAt: staleModule?.addedAt || row.created_at || new Date().toISOString()
     };
 
@@ -329,11 +620,62 @@ async function previewGenericModule(formationId, moduleId) {
   let dynamicContentZone = "";
   const fileExt = m.fileName.split('.').pop().toLowerCase();
   const isPDF = fileExt === "pdf";
+  const isZip = m.type === "zip";
+  let zipFiles = Array.isArray(m.zipFiles) ? m.zipFiles : [];
+  if (isZip && zipFiles.length === 0 && typeof m.fileData === "string") {
+    try {
+      const parsed = JSON.parse(m.fileData);
+      if (parsed && Array.isArray(parsed.files)) zipFiles = parsed.files;
+    } catch {}
+  }
+  const zipArchiveUrl = resolveZipArchiveUrl(m);
+  if (isZip && zipFiles.length === 0 && zipArchiveUrl) {
+    try {
+      zipFiles = await readTopLevelZipEntriesFromUrl(zipArchiveUrl);
+    } catch (err) {
+      console.warn("[previewGenericModule] ZIP metadata reload failed:", err.message);
+    }
+  }
 
   // Force l'activation du scrollbar sur le conteneur principal de l'application
   mainContainer.style.overflow = "auto";
 
-  if (isPDF) {
+  if (isZip) {
+    dynamicContentZone = `
+      <div style="width: 100%; margin-top: 20px; margin-bottom: 40px; padding: 20px; border: 1px solid #e2e8f0; border-radius: 16px; background: #f8fafc;">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#0284c7;margin-bottom:4px;">Archive ZIP</div>
+            <div style="font-size:14px;color:#475569;">${zipFiles.length} fichier(s) détecté(s) dans le ZIP. Les fichiers dans des dossiers sont maintenant affichés à plat.</div>
+          </div>
+          ${zipArchiveUrl ? `<a class="btn btn-secondary btn-sm" href="${zipArchiveUrl}" download="${safeFileName}" style="text-decoration:none;">${icon("download", 13)} Télécharger l’archive</a>` : ""}
+        </div>
+        ${zipFiles.length ? `
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            ${zipFiles.map(zipFile => {
+              const kind = zipFile.kind || inferZipEntryKind(zipFile.name);
+              return `
+                <div class="card" style="display:flex;align-items:center;gap:14px;padding:14px 16px;box-shadow:none;">
+                  <div style="flex-shrink:0;width:36px;height:36px;border-radius:10px;background:#e0f2fe;color:#0369a1;display:flex;align-items:center;justify-content:center;">
+                    ${zipEntryTypeIcon(kind)}
+                  </div>
+                  <div style="flex:1;min-width:0;">
+                    <div style="font-weight:700;font-size:14px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(zipFile.name)}</div>
+                    <div style="font-size:11px;color:#64748b;">${zipFile.label || zipEntryTypeLabel(kind)}${zipFile.size ? ` • ${(Number(zipFile.size) / 1024).toFixed(1)} KB` : ""}</div>
+                  </div>
+                  <button class="btn btn-sm btn-primary" onclick="previewZipEntryFlexible('${formationId}', '${moduleId}', '${escapeHTML(zipFile.path || zipFile.name).replace(/'/g, "&#39;")}')">${icon("eye", 13)} Ouvrir</button>
+                </div>
+              `;
+            }).join("")}
+          </div>
+        ` : `
+          <div style="text-align:center;color:#64748b;padding:30px 10px;background:#fff;border:1px dashed #cbd5e1;border-radius:12px;">
+            Aucun fichier exploitable n’a été trouvé à la racine du ZIP.
+          </div>
+        `}
+      </div>
+    `;
+  } else if (isPDF) {
     // Le PDF est agrandi à 1100px de hauteur pour un affichage immersif et large
     dynamicContentZone = `
       <div style="width: 100%; height: 1100px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0,0,0,0.03); background: #f8fafc; margin-top: 15px; margin-bottom: 40px;">

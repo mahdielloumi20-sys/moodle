@@ -440,9 +440,19 @@ async function syncSupabaseData() {
 
     // --- 2. FORMATIONS (AVEC CONTENUS COMPLETS) ---
     try {
-      const { data } = await window.supabaseInstance
+      let { data, error } = await window.supabaseInstance
         .from('courses')
-        .select('id, title, status, trainer_id, description, category, duration, level, price, modules, quiz, resources');
+        .select('id, title, status, trainer_id, description, category, duration, level, price, modules, quiz, resources, seances');
+
+      if (error && String(error.message || "").includes("seances")) {
+        const fallbackResult = await window.supabaseInstance
+          .from('courses')
+          .select('id, title, status, trainer_id, description, category, duration, level, price, modules, quiz, resources');
+        data = fallbackResult.data || [];
+        error = fallbackResult.error;
+      }
+
+      if (error) throw error;
       
       if (data && data.length > 0) {
         courses = data.map(c => ({
@@ -458,10 +468,80 @@ async function syncSupabaseData() {
           modules: c.modules || [],       // Tableau de modules (titres, sources, id youtube...)
           quiz: c.quiz || [],             // Quiz associés
           resources: c.resources || [],   // Documents téléchargeables
+          seances: c.seances || [{ id: "s1", label: "Séance 1" }],
           resourceCount: (c.resources || []).length
         }));
       }
     } catch (e) { console.warn("Échec du chargement des cours:", e.message); }
+
+    try {
+      const { data: sections, error: sectionsError } = await window.supabaseInstance
+        .from('course_sections')
+        .select('id, course_id');
+      if (sectionsError) throw sectionsError;
+
+      let contents = [];
+      let contentsError = null;
+      const contentsResult = await window.supabaseInstance
+        .from('course_contents')
+        .select('id, section_id, title, content_type, content, description, allow_download, seance_id, created_at');
+      contents = contentsResult.data || [];
+      contentsError = contentsResult.error;
+
+      if (contentsError && String(contentsError.message || "").includes("seance_id")) {
+        const fallbackResult = await window.supabaseInstance
+          .from('course_contents')
+          .select('id, section_id, title, content_type, content, description, allow_download, created_at');
+        contents = fallbackResult.data || [];
+        contentsError = fallbackResult.error;
+      }
+
+      if (contentsError) throw contentsError;
+
+      const courseIdBySectionId = {};
+      (sections || []).forEach(section => {
+        courseIdBySectionId[section.id] = section.course_id;
+      });
+
+      const modulesByCourseId = {};
+      (contents || []).forEach(content => {
+        const courseId = courseIdBySectionId[content.section_id];
+        if (!courseId) return;
+        if (!modulesByCourseId[courseId]) modulesByCourseId[courseId] = [];
+        const type = content.content_type || "document";
+        let zipFiles = [];
+        if (type === "zip" && content.content) {
+          try {
+            const parsedZip = JSON.parse(content.content);
+            if (Array.isArray(parsedZip?.children)) zipFiles = parsedZip.children;
+            else if (Array.isArray(parsedZip?.files)) zipFiles = parsedZip.files;
+          } catch {}
+        }
+        modulesByCourseId[courseId].push({
+          id: content.id,
+          type,
+          title: content.title || "Sans titre",
+          desc: content.description || "",
+          fileData: content.content || "",
+          youtubeUrl: type === "video" ? content.content || "" : "",
+          youtubeId: type === "video" && typeof parseYoutubeId === "function" ? parseYoutubeId(content.content || "") : "",
+          allowDownload: !!content.allow_download,
+          seanceId: content.seance_id || "s1",
+          zipFiles,
+          addedAt: content.created_at || new Date().toISOString(),
+          _fromSupabaseContent: true
+        });
+      });
+
+      courses = courses.map(course => {
+        const courseModules = modulesByCourseId[course.id] || course.modules || [];
+        return {
+          ...course,
+          modules: courseModules,
+          seances: normalizeCourseSeances(course.seances, courseModules.map(module => module?.seanceId).filter(Boolean))
+        };
+      });
+    } catch (e) { console.warn("Échec du chargement des contenus de cours:", e.message); }
     loadImportedCoursesFromStorage();
 
     // --- 3. INSCRIPTIONS ---
@@ -894,6 +974,7 @@ const ICONS = {
   edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>',
   eye: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>',
   fileText: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>',
+  archive: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="4" rx="1"></rect><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"></path><path d="M10 12h4"></path></svg>',
   grid: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="8" height="8"></rect><rect x="13" y="3" width="8" height="8"></rect><rect x="3" y="13" width="8" height="8"></rect><rect x="13" y="13" width="8" height="8"></rect></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 19 10 13 14 17 20 7"></polyline><polyline points="20 7 20 13 14 13"></polyline></svg>',
   layers: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 3 7 12 12 21 7 12 2"></polygon><polyline points="3 12 12 17 21 12"></polyline><polyline points="3 17 12 22 21 17"></polyline></svg>',
@@ -975,7 +1056,8 @@ let appState = {
   trackingGroupFilter: "",
   usersRoleFilter: "all",
   trainerEvalTab: "quiz",
-  trainerSelectedCourseId: ""
+  trainerSelectedCourseId: "",
+  trainerSelectedSeanceId: "s1"
 };
 
 function persistAdminSettings() {
@@ -2581,7 +2663,8 @@ function courseTypeLabel(type) {
     json: "Données JSON",
     markdown: "Markdown",
     dragdrop: "Glisser-déposer",
-    video: "Vidéo YouTube"
+    video: "Vidéo YouTube",
+    zip: "Fichier ZIP"
   };
   return map[type] || "Fichier";
 }
@@ -2594,7 +2677,8 @@ function courseTypeIcon(type) {
     json: "settings",
     markdown: "fileText",
     dragdrop: "upload",
-    video: "eye"
+    video: "eye",
+    zip: "archive"
   };
   return icon(map[type] || "fileText", 15);
 }
@@ -2607,7 +2691,8 @@ function courseTypeBadgeClass(type) {
     json: "badge--info",
     markdown: "",
     dragdrop: "",
-    video: "badge--danger"
+    video: "badge--danger",
+    zip: "badge--info"
   };
   return map[type] || "";
 }
@@ -2648,6 +2733,150 @@ function openAddCourseModal(formationId) {
     body,
     `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>`
   );
+}
+
+function getDefaultTrainerSeances() {
+  return [{ id: "s1", label: "Séance 1" }];
+}
+
+function getSeanceNumericOrder(seanceId) {
+  const match = /^s(\d+)$/i.exec(String(seanceId || ""));
+  return match ? Number(match[1]) : Number.MAX_SAFE_INTEGER;
+}
+
+function buildSeanceLabel(seanceId, fallbackIndex = 1) {
+  const order = getSeanceNumericOrder(seanceId);
+  return `Séance ${Number.isFinite(order) && order !== Number.MAX_SAFE_INTEGER ? order : fallbackIndex}`;
+}
+
+function collectCourseSeanceIds(course) {
+  const ids = new Set();
+  if (course?.seances && Array.isArray(course.seances)) {
+    course.seances.forEach(seance => {
+      if (seance?.id) ids.add(String(seance.id));
+    });
+  }
+  if (course?.modules && Array.isArray(course.modules)) {
+    course.modules.forEach(module => {
+      if (module?.seanceId) ids.add(String(module.seanceId));
+    });
+  }
+  return [...ids];
+}
+
+function normalizeCourseSeances(existingSeances, derivedIds) {
+  const merged = new Map();
+  merged.set("s1", { id: "s1", label: "Séance 1" });
+
+  (Array.isArray(existingSeances) ? existingSeances : [])
+    .filter(seance => seance && seance.id)
+    .forEach(seance => {
+      const id = String(seance.id);
+      merged.set(id, { id, label: String(seance.label || buildSeanceLabel(id, merged.size + 1)) });
+    });
+
+  (Array.isArray(derivedIds) ? derivedIds : []).forEach((id, index) => {
+    if (!merged.has(id)) {
+      merged.set(id, { id, label: buildSeanceLabel(id, merged.size + index + 1) });
+    }
+  });
+
+  return [...merged.values()].sort((a, b) => getSeanceNumericOrder(a.id) - getSeanceNumericOrder(b.id));
+}
+
+function ensureTrainerSeances(course) {
+  if (!course) return getDefaultTrainerSeances();
+  course.seances = normalizeCourseSeances(course.seances, collectCourseSeanceIds(course));
+  if (Array.isArray(course.modules)) {
+    course.modules.forEach(module => {
+      if (module && !module.seanceId) module.seanceId = course.seances[0].id;
+    });
+  }
+  return course.seances;
+}
+
+function getTrainerSelectedSeanceId(course) {
+  const seances = ensureTrainerSeances(course);
+  if (!seances.some(seance => seance.id === appState.trainerSelectedSeanceId)) {
+    const courseModules = Array.isArray(course?.modules) ? course.modules : [];
+    const seanceWithContent = seances.find(seance => courseModules.some(module => String(module?.seanceId || "s1") === seance.id));
+    appState.trainerSelectedSeanceId = seanceWithContent?.id || seances[0].id;
+  }
+  return appState.trainerSelectedSeanceId;
+}
+
+function getCourseSeanceLabel(course, seanceId) {
+  const seances = ensureTrainerSeances(course);
+  return seances.find(seance => seance.id === seanceId)?.label || seances[0].label;
+}
+
+function selectTrainerSeance(seanceId) {
+  appState.trainerSelectedSeanceId = seanceId || "s1";
+  renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), "preview");
+}
+
+async function addTrainerSeance(courseId) {
+  const course = getCourseAny(courseId);
+  if (!course) {
+    showToast("Formation introuvable.", "danger");
+    return;
+  }
+
+  const seances = ensureTrainerSeances(course);
+  let nextIndex = seances.length + 1;
+  while (seances.some(seance => seance.id === `s${nextIndex}`)) nextIndex += 1;
+
+  const newSeance = { id: `s${nextIndex}`, label: `Séance ${nextIndex}` };
+  seances.push(newSeance);
+  appState.trainerSelectedSeanceId = newSeance.id;
+
+  const synced = await supabaseSaveCourse(course);
+  if (synced) {
+    showToast(`${newSeance.label} ajoutée.`, "success");
+  } else {
+    showToast("La séance a été ajoutée à l'interface, mais la synchronisation Supabase a échoué.", "danger");
+  }
+  renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), "preview");
+}
+
+function attachSelectedSeanceToModule(formationId, module) {
+  const course = getCourseAny(formationId);
+  const seanceId = getTrainerSelectedSeanceId(course);
+  return { ...module, seanceId };
+}
+
+async function syncCourseModulesToSupabase(formationId, module) {
+  const course = getCourseAny(formationId);
+  if (!course) return false;
+  ensureTrainerSeances(course);
+  if (!Array.isArray(course.modules)) course.modules = [];
+  const existingIndex = course.modules.findIndex(item => item.id === module.id);
+  if (existingIndex >= 0) {
+    course.modules[existingIndex] = { ...course.modules[existingIndex], ...module };
+  } else {
+    course.modules.push(module);
+  }
+  return supabaseSaveCourse(course);
+}
+
+async function insertCourseContentSafe(payload) {
+  if (!window.supabaseInstance) {
+    return { data: null, error: new Error("Supabase indisponible") };
+  }
+
+  const attemptInsert = async rowPayload => {
+    return window.supabaseInstance
+      .from("course_contents")
+      .insert([rowPayload])
+      .select();
+  };
+
+  let result = await attemptInsert(payload);
+  if (result?.error && String(result.error.message || "").includes("seance_id")) {
+    const { seance_id, ...fallbackPayload } = payload;
+    result = await attemptInsert(fallbackPayload);
+  }
+  return result;
 }
 
 function renderTrainerPreview(uid) {
@@ -4275,6 +4504,7 @@ async function supabaseSaveCourse(newCourse) {
     price: Number(newCourse.price) || 0,
     modules: newCourse.modules || [],
     quiz: newCourse.quiz || [],
+    seances: Array.isArray(newCourse.seances) && newCourse.seances.length ? newCourse.seances : getDefaultTrainerSeances(),
     sessions: newCourse.sessions || [],
     resources: newCourse.resources || []
   };

@@ -180,6 +180,7 @@ async function confirmAddYoutubeVideo() {
   const desc    = (document.getElementById("yt_desc")?.value  || "").trim();
   const url     = (document.getElementById("yt_url")?.value   || "").trim();
   const errorEl = document.getElementById("yt_error");
+  const selectedSeanceId = getTrainerSelectedSeanceId(getCourseAny(formationId));
 
   // Validation titre
   if (!title) {
@@ -204,6 +205,7 @@ async function confirmAddYoutubeVideo() {
     desc,
     youtubeUrl: url,
     youtubeId,
+    seanceId: selectedSeanceId,
     addedAt: new Date().toISOString()
   };
 
@@ -220,7 +222,8 @@ async function confirmAddYoutubeVideo() {
             title: title,
             content_type: "video",
             content: url,           // on stocke l'URL YouTube d'origine ; youtubeId est re-parsable avec parseYoutubeId()
-            description: desc || null
+            description: desc || null,
+            seance_id: selectedSeanceId
           }
         ])
         .select();
@@ -243,6 +246,7 @@ async function confirmAddYoutubeVideo() {
   const existing = loadFormationModules(formationId);
   existing.push(newModule);
   saveFormationModules(formationId, existing);
+  await syncCourseModulesToSupabase(formationId, newModule);
 
   closeModal();
   showToast(`Cours vidéo « ${title} » ajouté avec succès.`, "success");
@@ -317,6 +321,7 @@ function openAddCourseModal(formationId) {
     { key: "quiz",       label: "Quiz / Évaluation", desc: "Questionnaire ou évaluation externe.", disponible: true },
     { key: "text",       label: "Texte / Article",   desc: "Contenu textuel rédigé directement.", disponible: true },
     { key: "excel",      label: "Feuille Excel",     desc: "Tableur .xlsx/.xls/.csv téléchargeable.", disponible: true },
+    { key: "zip",        label: "Fichier ZIP",       desc: "Importe un ZIP et affiche ses fichiers extraits.", disponible: true },
     { key: "html",       label: "Page HTML",         desc: "Un fichier .html structuré comme module.", disponible: false },
     { key: "markdown",   label: "Fichier Markdown",  desc: "Document .md rendu en page de cours.", disponible: false }
   ];
@@ -324,6 +329,9 @@ function openAddCourseModal(formationId) {
   function typeOnclick(t, fId) {
     if (t.key === "video") {
       return `closeModal(); openAddVideoModal('${fId}');`;
+    }
+    if (t.key === "zip") {
+      return `closeModal(); openAddModuleModal('${fId}', 'zip');`;
     }
     // SI c'est un de tes nouveaux types, on appelle la fonction générique de ton autre fichier
     if (t.key === "document" || t.key === "quiz" || t.key === "text" || t.key === "excel") {
@@ -388,22 +396,29 @@ function renderTrainerPreview(uid) {
   }
 
   const selectedFormation = trainerFormations.find(f => f.id === appState.trainerSelectedCourseId);
+  const seances = ensureTrainerSeances(selectedFormation);
+  const selectedSeanceId = getTrainerSelectedSeanceId(selectedFormation);
 
   // ── Modules originaux de la formation (demo/Supabase)
-  const DEMO_TYPES = ["html", "video", "markdown", "powerpoint", "excel", "json", "dragdrop"];
+  const DEMO_TYPES = ["html", "video", "markdown", "powerpoint", "excel", "json", "dragdrop", "zip"];
   const baseModules = (Array.isArray(selectedFormation?.modules) ? selectedFormation.modules : [])
     .map((m, i) => ({
       ...m,
       id: m.id || `base_${i}`,
+      seanceId: m.seanceId || "s1",
       type: m.type || DEMO_TYPES[i % DEMO_TYPES.length],
-      _isBase: true  // module original → suppression désactivée
+      _isBase: !m._fromSupabaseContent
     }));
 
   // ── Modules ajoutés par le formateur (stockés en localStorage)
-  const addedModules = loadFormationModules(selectedFormation.id);
+  const baseModuleIds = new Set(baseModules.map(m => String(m.id)));
+  const addedModules = loadFormationModules(selectedFormation.id)
+    .filter(m => m && !baseModuleIds.has(String(m.id)))
+    .map(m => ({ ...m, seanceId: m.seanceId || "s1" }));
 
   // ── Fusion : base d'abord, ajoutés ensuite
-  const allModules = [...baseModules, ...addedModules];
+  const allAvailableModules = [...baseModules, ...addedModules];
+  const allModules = allAvailableModules.filter(m => (m.seanceId || "s1") === selectedSeanceId);
 
   return `
     <div class="breadcrumb"><span>Espace Formateur</span><span>Cours de la formation</span></div>
@@ -416,7 +431,7 @@ function renderTrainerPreview(uid) {
         <select
           class="form-control"
           style="min-width:240px;"
-          onchange="appState.trainerSelectedCourseId = this.value; renderWorkspacePage(getWorkspaceRole(), 'preview');">
+          onchange="appState.trainerSelectedCourseId = this.value; appState.trainerSelectedSeanceId = 's1'; renderWorkspacePage(getWorkspaceRole(), 'preview');">
           ${trainerFormations.map(f => `
             <option value="${f.id}" ${f.id === appState.trainerSelectedCourseId ? "selected" : ""}>
               ${escapeHTML(f.title)}
@@ -429,13 +444,32 @@ function renderTrainerPreview(uid) {
       </div>
     </div>
 
-    ${allModules.length === 0 ? `
-      <div style="margin-top:8px;">
-        ${trainerEmptyState("Aucun cours", "Cette formation ne contient pas encore de cours. Ajoutez-en un avec le bouton ci-dessus.")}
-      </div>
-    ` : `
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
-        ${allModules.map((m) => {
+    <div class="trainer-course-manager">
+      <aside class="trainer-seances-sidebar" aria-label="Séances">
+        <div class="trainer-seances-title">Séances</div>
+        <div class="trainer-seances-list">
+          ${seances.map(seance => `
+            <button
+              type="button"
+              class="trainer-seance-item ${seance.id === selectedSeanceId ? "active" : ""}"
+              onclick="selectTrainerSeance('${seance.id}')">
+              <span>${escapeHTML(seance.label)}</span>
+              <strong>${allAvailableModules.filter(m => (m.seanceId || "s1") === seance.id).length}</strong>
+            </button>
+          `).join("")}
+        </div>
+        <button type="button" class="btn btn-secondary btn-sm trainer-add-seance-btn" onclick="addTrainerSeance('${selectedFormation.id}')">
+          ${icon("plus", 13)} Ajouter une séance
+        </button>
+      </aside>
+      <section class="trainer-course-list">
+        ${allModules.length === 0 ? `
+          <div style="margin-top:8px;">
+            ${trainerEmptyState("Aucun cours", "Cette séance ne contient pas encore de cours. Ajoutez-en un avec le bouton ci-dessus.")}
+          </div>
+        ` : `
+          <div style="display:flex;flex-direction:column;gap:10px;margin-top:4px;">
+            ${allModules.map((m) => {
           const isVideo  = m.type === "video";
           const isAdded  = !m._isBase;
 
@@ -449,7 +483,7 @@ function renderTrainerPreview(uid) {
                            onclick="previewYoutubeModule('${m.youtubeId}', '${escapeHTML(m.title).replace(/'/g, "&#39;")}')">
                            ${icon("eye", 13)} Aperçu
                          </button>`;
-          } else if (["document", "quiz", "text", "excel"].includes(m.type)) {
+          } else if (["document", "quiz", "text", "excel", "zip"].includes(m.type)) {
             // Appelle la fonction de prévisualisation de ton nouveau fichier en lui passant l'ID unique du module
             previewBtn = `<button class="btn btn-sm btn-secondary"
                            onclick="previewGenericModule('${selectedFormation.id}', '${m.id}')">
@@ -499,6 +533,7 @@ function renderTrainerPreview(uid) {
                 <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:3px;">
                   ${escapeHTML(m.title)}
                 </div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:3px;">${escapeHTML(getCourseSeanceLabel(selectedFormation, m.seanceId || "s1"))}</div>
                 ${m.desc ? `<div style="font-size:12px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${escapeHTML(m.desc)}</div>` : ""}
                 ${(isVideo && m.youtubeUrl) ? `
                   <div style="font-size:11px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
@@ -520,9 +555,11 @@ function renderTrainerPreview(uid) {
               </div>
             </div>
           `;
-        }).join("")}
-      </div>
-    `}
+            }).join("")}
+          </div>
+        `}
+      </section>
+    </div>
 
     ${addedModules.length > 0 ? `
       <p style="margin-top:16px;font-size:12px;color:var(--text-muted);text-align:right;">

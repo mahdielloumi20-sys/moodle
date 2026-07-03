@@ -7,3 +7,86 @@
 .sidebar-section-title {
   color: var(--accent);
 }
+
+.trainer-course-manager {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 8px;
+}
+
+.trainer-seances-sidebar {
+  border: 1px solid var(--border, #e5e7eb);
+  border-radius: 8px;
+  background: var(--surface, #fff);
+  padding: 12px;
+  position: sticky;
+  top: 88px;
+}
+
+.trainer-seances-title {
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+}
+
+.trainer-seances-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.trainer-seance-item {
+  align-items: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  color: var(--text, #111827);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  justify-content: space-between;
+  min-height: 38px;
+  padding: 8px 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.trainer-seance-item:hover,
+.trainer-seance-item.active {
+  background: var(--surface-2, #f1f5f9);
+  border-color: var(--border, #e5e7eb);
+}
+
+.trainer-seance-item.active {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.trainer-seance-item strong {
+  color: var(--text-muted, #64748b);
+  font-size: 12px;
+}
+
+.trainer-add-seance-btn {
+  justify-content: center;
+  width: 100%;
+}
+
+.trainer-course-list {
+  min-width: 0;
+}
+
+@media (max-width: 860px) {
+  .trainer-course-manager {
+    grid-template-columns: 1fr;
+  }
+
+  .trainer-seances-sidebar {
+    position: static;
+  }
+}
