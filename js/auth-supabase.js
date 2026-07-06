@@ -141,3 +141,35 @@ window.signInWithSupabase = async function signInWithSupabase(email, password) {
     redirectTo
   };
 };
+
+
+// ─── Protection contre le bfcache (retour arrière/avant du navigateur) ────
+// Quand le navigateur restaure une page depuis son cache mémoire (bouton
+// "Suivant" après un "Précédent"), aucun script ne se ré-exécute normalement :
+// la page protégée s'affiche telle qu'elle était, même si la session a expiré
+// ou a été fermée entre-temps. On force donc une revérification à chaque
+// restauration de page.
+window.addEventListener("pageshow", async (event) => {
+  if (!event.persisted) return; // page vraiment (re)chargée depuis le réseau : rien à faire
+
+  const isLoginPage = window.location.pathname.includes("login.html");
+  const uid = sessionStorage.getItem("iccaCurrentUserId");
+
+  // Page protégée (dashboard) restaurée depuis le cache : on revalide la session
+  if (!isLoginPage) {
+    let validSession = false;
+    try {
+      if (uid && window.supabaseInstance) {
+        const { data } = await window.supabaseInstance.auth.getSession();
+        validSession = !!data?.session;
+      }
+    } catch {
+      validSession = false;
+    }
+
+    if (!validSession) {
+      sessionStorage.clear();
+      window.location.replace("login.html");
+    }
+  }
+});

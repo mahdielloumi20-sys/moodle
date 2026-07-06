@@ -1,4 +1,5 @@
-window.APP_ENV = window.APP_ENV || {
+﻿window.APP_ENV = window.APP_ENV || {
   SUPABASE_URL: "https://rizudkdynwytrxhfxlqa.supabase.co",
-  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_5ki77V65y3jBsqWe2xjXsA_g53tQpHy"
+  SUPABASE_PUBLISHABLE_KEY: "sb_publishable_5ki77V65y3jBsqWe2xjXsA_g53tQpHy",
+  STRIPE_PAYMENT_URL: ""
 };

@@ -9,6 +9,37 @@ let groups = [];
 let accessRules = [];
 let availableGroups = []; // Stockera la liste globale des groupes
 
+const DEFAULT_STRIPE_PAYMENT_URL = "";
+
+function getStripePaymentUrl(courseId) {
+  const course = getDemoCourse(courseId) || getCourse(courseId);
+  const rawUrl = String(
+    course?.stripePaymentUrl ||
+    course?.paymentUrl ||
+    window.APP_ENV?.STRIPE_PAYMENT_URL ||
+    window.STRIPE_PAYMENT_URL ||
+    DEFAULT_STRIPE_PAYMENT_URL ||
+    ""
+  ).trim();
+
+  if (!rawUrl) return "";
+
+  return rawUrl
+    .replaceAll("{courseId}", encodeURIComponent(courseId))
+    .replaceAll("{courseTitle}", encodeURIComponent(course?.title || ""));
+}
+
+function openStripePayment(courseId) {
+  const stripeUrl = getStripePaymentUrl(courseId);
+  if (!stripeUrl) {
+    showToast("Le lien Stripe n'est pas encore configuré pour ce cours.", "info");
+    return;
+  }
+
+  const paymentWindow = window.open(stripeUrl, "_blank", "noopener,noreferrer");
+  if (paymentWindow) closeModal();
+}
+
 // 1. Charger tous les groupes existants sur la plateforme
 async function fetchAvailableGroups() {
   try {
@@ -3895,7 +3926,7 @@ function openCourseDetail(courseId) {
     ? `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button><button class="btn btn-primary" onclick="navigate('courses'); closeModal();">${icon("book", 14)} Aller à Mes cours</button>`
     : alreadyRequested
       ? `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button><span style="color:var(--text-muted); font-size:13px;">${icon("clock", 13)} Demande envoyée, en attente de validation.</span>`
-      : `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-primary" onclick="requestCourseAccess('${courseId}'); closeModal();">${icon("download", 14)} Demander l'accès</button>`;
+      : `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button><button class="btn btn-secondary" onclick="openStripePayment('${courseId}')">${icon("card", 14)} Paiement en ligne</button><button class="btn btn-primary" onclick="requestCourseAccess('${courseId}'); closeModal();">${icon("download", 14)} Demander l'accès</button>`;
 
   showModal(escapeHTML(course.title), body, footerBtn);
 }
