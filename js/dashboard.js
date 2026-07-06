@@ -8,8 +8,210 @@ let activityLog = [];
 let groups = [];
 let accessRules = [];
 let availableGroups = []; // Stockera la liste globale des groupes
+let calendarEvents = [];
 
 const DEFAULT_STRIPE_PAYMENT_URL = "";
+const CALENDAR_EVENTS_STORAGE_KEY = "icca_calendar_events";
+const CALENDAR_SESSION_DEFAULT_DURATION_MINUTES = 90;
+
+function makeCalendarEventId() {
+  if (window.crypto?.randomUUID) return window.crypto.randomUUID();
+  // Fallback UUID v4 si randomUUID n'est pas disponible
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+    const r = Math.random() * 16 | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
+function isValidUuid(value) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || ""));
+}
+
+function loadCalendarEvents() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CALENDAR_EVENTS_STORAGE_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function persistCalendarEvents() {
+  try {
+    localStorage.setItem(CALENDAR_EVENTS_STORAGE_KEY, JSON.stringify(calendarEvents));
+  } catch {}
+}
+
+calendarEvents = loadCalendarEvents();
+
+function parseSessionNumberFromLabel(label) {
+  const match = String(label || "").match(/(?:séance|session)\s*(\d+)/i);
+  return match ? Number(match[1]) : 1;
+}
+
+function getCalendarEventDateParts(startAt, endAt) {
+  const startDate = startAt ? new Date(startAt) : null;
+  const endDate = endAt ? new Date(endAt) : null;
+  return {
+    date: startDate && !Number.isNaN(startDate.getTime()) ? startDate.toISOString().split("T")[0] : "",
+    startTime: startDate && !Number.isNaN(startDate.getTime()) ? startDate.toTimeString().slice(0, 5) : "",
+    endTime: endDate && !Number.isNaN(endDate.getTime()) ? endDate.toTimeString().slice(0, 5) : ""
+  };
+}
+
+function normalizeCalendarEventRecord(row) {
+  if (!row) return null;
+
+  const course = getCourseAny(row.course_id);
+  const startAt = row.starts_at || row.start_at || "";
+  const endAt = row.ends_at || row.end_at || "";
+  const sessionNumber = Number(row.session_number || parseSessionNumberFromLabel(row.title || "")) || 1;
+  const dateParts = getCalendarEventDateParts(startAt, endAt);
+  const title = row.title || `Séance ${sessionNumber} - ${row.course_title || course?.title || "Formation"}`;
+
+  return {
+    id: row.id,
+    courseId: row.course_id || "",
+    courseTitle: row.course_title || course?.title || "",
+    trainerId: row.created_by || course?.trainerId || null,
+    sessionNumber,
+    date: dateParts.date,
+    startTime: dateParts.startTime,
+    endTime: dateParts.endTime,
+    startAt,
+    endAt: endAt || (startAt ? new Date(new Date(startAt).getTime() + CALENDAR_SESSION_DEFAULT_DURATION_MINUTES * 60000).toISOString() : ""),
+    title,
+    type: row.type || "zoom",
+    createdBy: row.created_by || null,
+    googleCalendarEventId: row.google_calendar_event_id || null,
+    createdAt: row.created_at || new Date().toISOString(),
+    updatedAt: row.updated_at || row.created_at || new Date().toISOString(),
+    source: "supabase"
+  };
+}
+
+function normalizeCalendarEventFallback(item) {
+  if (!item) return null;
+  const course = getCourseAny(item.courseId);
+  return {
+    id: isValidUuid(item.id) ? item.id : makeCalendarEventId(),
+    courseId: item.courseId || "",
+    courseTitle: item.courseTitle || course?.title || "",
+    trainerId: item.trainerId || course?.trainerId || null,
+    sessionNumber: Number(item.sessionNumber || parseSessionNumberFromLabel(item.title || "")) || 1,
+    date: item.date || "",
+    startTime: item.startTime || "",
+    endTime: item.endTime || "",
+    startAt: item.startAt || "",
+    endAt: item.endAt || "",
+    title: item.title || `Séance ${Number(item.sessionNumber || 1)} - ${course?.title || "Formation"}`,
+    type: item.type || "zoom",
+    createdBy: item.createdBy || null,
+    googleCalendarEventId: item.googleCalendarEventId || null,
+    createdAt: item.createdAt || new Date().toISOString(),
+    updatedAt: item.updatedAt || new Date().toISOString(),
+    source: item.source || "local"
+  };
+}
+
+function normalizeCalendarEventsList(list) {
+  return (Array.isArray(list) ? list : [])
+    .map(item => item?.starts_at || item?.start_at || item?.course_id ? normalizeCalendarEventRecord(item) : normalizeCalendarEventFallback(item))
+    .filter(Boolean);
+}
+
+function buildCalendarSessionPayload(event, createdBy = null) {
+  return {
+    id: event.id || makeCalendarEventId(),
+    course_id: event.courseId,
+    course_title: event.courseTitle || "",
+    session_number: Number(event.sessionNumber) || 1,
+    title: event.title || `Séance ${Number(event.sessionNumber) || 1} - ${event.courseTitle || "Formation"}`,
+    starts_at: event.startAt,
+    ends_at: event.endAt,
+    type: event.type || "zoom",
+    created_by: createdBy || event.createdBy || null,
+    google_calendar_event_id: event.googleCalendarEventId || null,
+    updated_at: new Date().toISOString()
+  };
+}
+
+function syncTrainerSessionsFromCalendarEvents() {
+  trainerSessions = calendarEvents.map(event => ({
+    id: event.id,
+    courseId: event.courseId,
+    title: event.title,
+    startsAt: event.startAt,
+    type: event.type || "zoom"
+  }));
+}
+
+async function loadCalendarEventsFromSupabase() {
+  if (!window.supabaseInstance) return false;
+
+  const selectQueries = [
+    "id, course_id, course_title, session_number, title, starts_at, ends_at, type, created_by, google_calendar_event_id, created_at, updated_at",
+    "id, course_id, title, starts_at, type, created_at"
+  ];
+
+  for (const query of selectQueries) {
+    const { data, error } = await window.supabaseInstance
+      .from("sessions")
+      .select(query)
+      .order("starts_at", { ascending: true });
+
+    if (!error) {
+      if (Array.isArray(data) && data.length > 0) {
+        calendarEvents = normalizeCalendarEventsList(data);
+      } else if (calendarEvents.length === 0) {
+        calendarEvents = normalizeCalendarEventsList(loadCalendarEvents());
+      }
+      syncTrainerSessionsFromCalendarEvents();
+      return true;
+    }
+
+    if (!String(error.message || "").match(/course_title|session_number|ends_at|google_calendar_event_id|created_by/)) {
+      throw error;
+    }
+  }
+
+  return false;
+}
+
+async function saveCalendarEventToSupabase(event, { existingId = null } = {}) {
+  if (!window.supabaseInstance) return false;
+
+  const createdBy = getSessionUserId() || event.createdBy || null;
+  const payload = buildCalendarSessionPayload(event, createdBy);
+  const rowId = isValidUuid(existingId) ? existingId : isValidUuid(event.id) ? event.id : payload.id;
+
+  const attempts = [
+    { ...payload, id: rowId },
+    {
+      id: rowId,
+      course_id: payload.course_id,
+      title: payload.title,
+      starts_at: payload.starts_at,
+      type: payload.type,
+      created_at: event.createdAt || new Date().toISOString()
+    }
+  ];
+
+  for (const attempt of attempts) {
+    const { error } = await window.supabaseInstance
+      .from("sessions")
+      .upsert(attempt, { onConflict: "id" });
+
+    if (!error) return true;
+
+    if (!String(error.message || "").match(/course_title|session_number|ends_at|google_calendar_event_id|created_by/)) {
+      throw error;
+    }
+  }
+
+  return false;
+}
 
 function getStripePaymentUrl(courseId) {
   const course = getDemoCourse(courseId) || getCourse(courseId);
@@ -38,6 +240,56 @@ function openStripePayment(courseId) {
 
   const paymentWindow = window.open(stripeUrl, "_blank", "noopener,noreferrer");
   if (paymentWindow) closeModal();
+}
+
+function getCatalogCoursesForCalendar() {
+  const published = courses.filter(course => course.status === "published");
+  return published.length > 0 ? published : courses.slice();
+}
+
+function getCalendarEventStart(event) {
+  return `${event.date}T${event.startTime || "00:00"}:00`;
+}
+
+function getCalendarEventsForScope(role, uid) {
+  const allEvents = calendarEvents.slice().filter(Boolean);
+  if (role === "admin") return allEvents;
+
+  if (role === "trainer") {
+    const trainerCourseIds = new Set(getTrainerCourseIds(uid));
+    return allEvents.filter(event => trainerCourseIds.has(event.courseId));
+  }
+
+  const enrolledCourseIds = new Set(
+    getParticipantCourses(uid)
+      .map(item => item.course && item.course.id)
+      .filter(Boolean)
+  );
+
+  return allEvents.filter(event => enrolledCourseIds.has(event.courseId));
+}
+
+function shiftCalendarMonth(delta) {
+  appState.calendarMonthOffset = (appState.calendarMonthOffset || 0) + delta;
+  renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
+}
+
+function openCalendarEventDetails(eventId) {
+  const event = calendarEvents.find(item => item.id === eventId);
+  if (!event) return;
+
+  const course = getCourseAny(event.courseId);
+  const startLabel = event.date ? fmtDate(event.date) : "-";
+  showModal(
+    escapeHTML(event.title || "Séance"),
+    `
+      <p><strong>Formation :</strong> ${course ? escapeHTML(course.title) : "-"}</p>
+      <p><strong>Séance :</strong> ${escapeHTML(String(event.sessionNumber || "-"))}</p>
+      <p><strong>Date :</strong> ${escapeHTML(startLabel)}</p>
+      <p><strong>Horaire :</strong> ${escapeHTML(event.startTime || "-")} - ${escapeHTML(event.endTime || "-")}</p>
+    `,
+    `<button class="btn btn-secondary" onclick="closeModal()">Fermer</button>`
+  );
 }
 
 // 1. Charger tous les groupes existants sur la plateforme
@@ -593,18 +845,10 @@ async function syncSupabaseData() {
 
     // --- 4. SESSIONS / CALENDRIER ---
     try {
-      const { data } = await window.supabaseInstance
-        .from('sessions')
-        .select('id, course_id, title, starts_at, type')
-        .order('starts_at', { ascending: true });
-      if (data && data.length > 0) {
-        trainerSessions = data.map(s => ({
-          id: s.id,
-          courseId: s.course_id,
-          title: s.title,
-          startsAt: s.starts_at,
-          type: s.type || "zoom"
-        }));
+      const loadedFromSupabase = await loadCalendarEventsFromSupabase();
+      if (!loadedFromSupabase && calendarEvents.length === 0) {
+        calendarEvents = normalizeCalendarEventsList(loadCalendarEvents());
+        syncTrainerSessionsFromCalendarEvents();
       }
     } catch (e) { console.warn("Échec du chargement des séances:", e.message); }
 
@@ -1088,7 +1332,8 @@ let appState = {
   usersRoleFilter: "all",
   trainerEvalTab: "quiz",
   trainerSelectedCourseId: "",
-  trainerSelectedSeanceId: "s1"
+  trainerSelectedSeanceId: "s1",
+  calendarMonthOffset: 0
 };
 
 function persistAdminSettings() {
@@ -1440,6 +1685,7 @@ async function setupWorkspaceShell(requestedRole) {
     ["dashboard", "Tableau de bord"],
     ["catalog", "Catalogue"],
     ["courses", "Mes cours"],
+    ["calendar", "Calendrier"],
     ["modules", "Modules en cours"],
     ["resources", "Ressources"],
     ["requests", "Demandes"],
@@ -1451,6 +1697,7 @@ async function setupWorkspaceShell(requestedRole) {
     ["users", "Utilisateurs"],
     ["groups", "Groupes"], // 🎯 AJOUT DE L'ONGLET GROUPES ICI
     ["catalog", "Catalogue"],
+    ["calendar", "Calendrier"],
     ["requests", "Demandes"],
     ["settings", "Paramètres"]
   ];
@@ -2477,30 +2724,7 @@ function renderTrainerCourses(uid) {
 }
 
 function renderTrainerCalendar(uid) {
-  const trainerCourses = getTrainerCourses(uid);
-  return `
-    <div class="breadcrumb"><span>Espace Formateur</span><span>Calendrier</span></div>
-    <div class="page-header">
-      <div>
-        <h1 class="page-title">Calendrier</h1>
-        <p class="page-subtitle">Séances Zoom, ateliers et échéances de vos cours.</p>
-      </div>
-    </div>
-    <div class="card">
-      ${trainerSessions.filter(session => trainerCourses.some(course => course.id === session.courseId)).map(session => {
-        const course = getCourse(session.courseId);
-        return `
-          <div class="activity-item">
-            <span class="activity-dot"></span>
-            <div class="activity-content">
-              <div><strong>${escapeHTML(session.title)}</strong></div>
-              <div class="activity-time">${course ? escapeHTML(course.title) : "-"} • ${fmtDate(session.startsAt)}</div>
-            </div>
-          </div>
-        `;
-      }).join("") || trainerEmptyState("Aucun événement", "Aucune séance n'est planifiée pour vos cours.")}
-    </div>
-  `;
+  return renderCalendarPage("Espace Formateur", "trainer", uid, false);
 }
 
 function renderTrainerEvaluations(uid) {
@@ -4008,51 +4232,324 @@ function renderParticipantCertificates(uid) {
 }
 
 function renderParticipantCalendar(uid) {
-  const participantCourses = getParticipantAllCourses(uid);
+  return renderCalendarPage("Espace Apprenant", "participant", uid, false);
+}
 
-  // Collecter toutes les sessions des cours auxquels le participant a accès
-  const allEvents = [];
-  participantCourses.forEach(item => {
-    if (!item.course) return;
-    const courseObj = item.course;
-    // Sessions issues de la liste statique (démo) ou du cours lui-même
-    const demoCourse = getDemoCourse(courseObj.id);
-    const sessions = (courseObj.sessions && courseObj.sessions.length > 0)
-      ? courseObj.sessions
-      : (demoCourse ? getDemoCourseQuiz ? getDemoCoursesSessions(courseObj.id) : [] : []);
-    const resolvedSessions = courseObj.sessions || (demoCourse?.sessions) || [];
-    resolvedSessions.forEach(sess => {
-      allEvents.push({ courseTitle: courseObj.title, session: sess });
+function renderAdminCalendar() {
+  return renderCalendarPage("Administration", "admin", getSessionUserId(), true);
+}
+
+function getCalendarMonthData(referenceDate = new Date(), events = []) {
+  const year = referenceDate.getFullYear();
+  const month = referenceDate.getMonth();
+  const startOfMonth = new Date(year, month, 1);
+  const totalDays = new Date(year, month + 1, 0).getDate();
+  const leadingDays = (startOfMonth.getDay() + 6) % 7;
+  const todayKey = new Date().toISOString().split("T")[0];
+  const monthLabel = referenceDate.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+  const capitalizedMonthLabel = monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1);
+  const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const dayEventMap = new Map();
+
+  events
+    .filter(event => String(event.date || "").startsWith(monthKey))
+    .forEach(event => {
+      if (!dayEventMap.has(event.date)) dayEventMap.set(event.date, []);
+      dayEventMap.get(event.date).push(event);
     });
-    // Également inclure les sessions Supabase
-    trainerSessions.filter(s => s.courseId === courseObj.id).forEach(sess => {
-      // Eviter les doublons avec les sessions déjà dans le cours
-      if (!resolvedSessions.some(rs => rs.startsAt === sess.startsAt && rs.title === sess.title)) {
-        allEvents.push({ courseTitle: courseObj.title, session: sess });
-      }
-    });
-  });
 
-  // Trier par date croissante
-  allEvents.sort((a, b) => new Date(a.session.startsAt) - new Date(b.session.startsAt));
+  const eventPalettes = [
+    { bg: "#EAF2FF", border: "#8CB1FF", text: "#1F5FFF" },
+    { bg: "#EAF7F0", border: "#88D8A8", text: "#1E9A54" },
+    { bg: "#FFF4DB", border: "#F3C15B", text: "#B87400" },
+    { bg: "#FBE8F0", border: "#F08DB3", text: "#CC2C76" },
+    { bg: "#F1ECFF", border: "#B7A1FF", text: "#6A42D7" }
+  ];
 
-  const typeIcon = type => type === "atelier" ? "🛠️" : "🎥";
+  const cells = Array.from({ length: 42 }, (_, index) => {
+    const dayNumber = index - leadingDays + 1;
+    if (dayNumber < 1 || dayNumber > totalDays) {
+      return `<div class="calendar-cell calendar-cell--empty" aria-hidden="true"></div>`;
+    }
 
+    const cellDate = new Date(year, month, dayNumber);
+    const cellKey = cellDate.toISOString().split("T")[0];
+    const cellClass = cellKey === todayKey ? "calendar-cell calendar-cell--today" : "calendar-cell";
+    const eventsForDay = dayEventMap.get(cellKey) || [];
+    const eventChips = eventsForDay.slice(0, 2).map((event, eventIndex) => {
+      const palette = eventPalettes[(event.sessionNumber + eventIndex) % eventPalettes.length];
+      const shortTitle = event.title || `Séance ${event.sessionNumber}`;
+      const displayTitle = shortTitle.length > 28 ? `${shortTitle.slice(0, 27)}…` : shortTitle;
+      return `
+        <button
+          type="button"
+          class="calendar-event-chip"
+          onclick="openCalendarEventDetails('${event.id}')"
+          style="background:${palette.bg}; color:${palette.text}; border-color:${palette.border};"
+          title="${escapeHTML(shortTitle)}"
+        >${escapeHTML(displayTitle)}</button>
+      `;
+    }).join("");
+    const moreCount = eventsForDay.length > 2 ? `<div class="calendar-event-more">+${eventsForDay.length - 2} autres</div>` : "";
+
+    return `
+      <div class="${cellClass}" aria-label="${capitalizedMonthLabel} ${dayNumber}">
+        <span class="calendar-day-number">${dayNumber}</span>
+        ${eventsForDay.length ? `<div class="calendar-event-stack">${eventChips}${moreCount}</div>` : ""}
+      </div>
+    `;
+  }).join("");
+
+  return {
+    monthLabel: capitalizedMonthLabel,
+    cells,
+    currentMonthKey: monthKey
+  };
+}
+
+function renderCalendarSidebar(events, scopeLabel, canSync) {
+  const sorted = events
+    .slice()
+    .sort((a, b) => new Date(a.startAt) - new Date(b.startAt));
+
+  if (sorted.length === 0) {
+    return `
+      <aside class="calendar-sidebar card">
+        <div class="calendar-sidebar-head">
+          <div class="calendar-sidebar-icon">${icon("calendar", 18)}</div>
+          <h3 class="calendar-sidebar-title">Prochains événements</h3>
+        </div>
+        <div class="calendar-sidebar-empty">
+          <div class="calendar-empty-icon">${icon("clock", 22)}</div>
+          <h4>Aucun événement planifié</h4>
+          <p>Le calendrier n'a pas encore reçu de séance planifiée. L'admin peut les enregistrer dans Supabase depuis le bouton de synchronisation.</p>
+        </div>
+      </aside>
+    `;
+  }
+
+  const countLabel = sorted.length > 1 ? `${sorted.length} événements` : "1 événement";
   return `
-    <div class="breadcrumb"><span>Espace Apprenant</span><span>Calendrier</span></div>
-    <div class="page-header"><div><h1 class="page-title">Calendrier</h1><p class="page-subtitle">Les dates de vos cours et séances planifiées.</p></div></div>
-    <div class="card">
-      ${allEvents.map(ev => `
-        <div class="activity-item">
-          <span class="activity-dot"></span>
-          <div class="activity-content">
-            <div><strong>${typeIcon(ev.session.type)} ${escapeHTML(ev.session.title || ev.courseTitle)}</strong></div>
-            <div class="activity-time">${escapeHTML(ev.courseTitle)} • ${fmtDate(ev.session.startsAt)}</div>
+    <aside class="calendar-sidebar card">
+      <div class="calendar-sidebar-head">
+        <div class="calendar-sidebar-icon">${icon("calendar", 18)}</div>
+        <h3 class="calendar-sidebar-title">Prochains événements</h3>
+      </div>
+      <div class="calendar-sidebar-meta">${countLabel}${canSync ? ` • ${escapeHTML(scopeLabel)}` : ""}</div>
+      <div class="calendar-event-list">
+        ${sorted.slice(0, 8).map(event => {
+          const course = getCourseAny(event.courseId);
+          const dateLabel = event.date ? fmtDate(event.date) : "-";
+          const timeLabel = event.startTime && event.endTime ? `${event.startTime} - ${event.endTime}` : (event.startTime || "");
+          return `
+            <button type="button" class="calendar-event-card" onclick="openCalendarEventDetails('${event.id}')">
+              <div class="calendar-event-card-date">
+                <span class="calendar-event-card-month">${dateLabel.split(" ")[1] ? dateLabel.split(" ")[1].slice(0, 3).toUpperCase() : ""}</span>
+                <strong>${dateLabel.split(" ")[0] || ""}</strong>
+              </div>
+              <div class="calendar-event-card-content">
+                <div class="calendar-event-card-title">${escapeHTML(event.title || "Séance")}</div>
+                <div class="calendar-event-card-subtitle">${course ? escapeHTML(course.title) : ""}${timeLabel ? ` • ${escapeHTML(timeLabel)}` : ""}</div>
+              </div>
+            </button>
+          `;
+        }).join("")}
+      </div>
+    </aside>
+  `;
+}
+
+function renderCalendarPage(scopeLabel, role, uid, showAdminSyncButton = false) {
+  const referenceDate = new Date();
+  referenceDate.setMonth(referenceDate.getMonth() + (appState.calendarMonthOffset || 0));
+  const { monthLabel, cells } = getCalendarMonthData(referenceDate, getCalendarEventsForScope(role, uid));
+  const weekDays = ["LUN", "MAR", "MER", "JEU", "VEN", "SAM", "DIM"];
+  const events = getCalendarEventsForScope(role, uid);
+  return `
+    <div class="breadcrumb"><span>${scopeLabel}</span><span>Calendrier</span></div>
+    <div class="page-header calendar-page-header">
+      <div>
+        <h1 class="page-title">Mon calendrier</h1>
+        <p class="page-subtitle">${showAdminSyncButton ? "Synchronisez une séance puis les apprenants verront cette case remplir dans leur calendrier." : "Les séances liées à vos formations apparaîtront ici dès qu'elles seront synchronisées."}</p>
+      </div>
+      ${showAdminSyncButton ? `<div class="page-actions"><button class="btn btn-primary calendar-sync-btn" onclick="syncGoogleCalendar()">${icon("calendar", 16)} Synchroniser Google Calendar</button></div>` : ""}
+    </div>
+    <div class="calendar-layout">
+      <section class="calendar-board card">
+        <div class="calendar-board-header">
+          <div class="calendar-month-title-wrap">
+            <span class="calendar-month-accent"></span>
+            <h2 class="calendar-month-title">${monthLabel}</h2>
+          </div>
+          <div class="calendar-month-actions" aria-label="Navigation du calendrier">
+            <button class="calendar-nav-btn" type="button" aria-label="Mois précédent" onclick="shiftCalendarMonth(-1)">‹</button>
+            <button class="calendar-nav-btn" type="button" aria-label="Mois suivant" onclick="shiftCalendarMonth(1)">›</button>
           </div>
         </div>
-      `).join("") || trainerEmptyState("Aucun événement", "Les dates de vos cours apparaîtront ici dès votre inscription à une formation.")}
+        <div class="calendar-weekdays" role="presentation">
+          ${weekDays.map(day => `<div class="calendar-weekday">${day}</div>`).join("")}
+        </div>
+        <div class="calendar-grid" role="grid" aria-label="Calendrier mensuel">
+          ${cells}
+        </div>
+      </section>
+      ${renderCalendarSidebar(events, scopeLabel, showAdminSyncButton)}
     </div>
   `;
+}
+
+function syncGoogleCalendar() {
+  const coursesForCalendar = getCatalogCoursesForCalendar();
+  if (!coursesForCalendar.length) {
+    showToast("Aucune formation n'est encore disponible dans le catalogue.", "info");
+    return;
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const courseOptions = coursesForCalendar.map(course => `<option value="${course.id}">${escapeHTML(course.title)}</option>`).join("");
+
+  showModal(
+    "Synchroniser Google Calendar",
+    `
+      <div class="calendar-sync-form">
+        <p class="calendar-sync-note">Sélectionne une formation du catalogue, puis ajoute une séance à synchroniser. La séance sera enregistrée dans la table <code>sessions</code> de Supabase.</p>
+        <div class="calendar-sync-grid">
+          <div class="field">
+            <label for="calendarSyncCourse">Formation</label>
+            <select id="calendarSyncCourse" class="form-control">${courseOptions}</select>
+          </div>
+          <div class="field">
+            <label for="calendarSyncSession">Numéro de séance</label>
+            <input id="calendarSyncSession" class="form-control" type="number" min="1" step="1" value="1">
+          </div>
+        </div>
+        <div class="calendar-sync-grid calendar-sync-grid--dates">
+          <div class="field">
+            <label for="calendarSyncDate">Date</label>
+            <input id="calendarSyncDate" class="form-control" type="date" value="${today}">
+          </div>
+          <div class="field">
+            <label for="calendarSyncStart">Début</label>
+            <input id="calendarSyncStart" class="form-control" type="time" value="09:00">
+          </div>
+          <div class="field">
+            <label for="calendarSyncEnd">Fin</label>
+            <input id="calendarSyncEnd" class="form-control" type="time" value="10:30">
+          </div>
+        </div>
+        <div class="calendar-sync-preview" id="calendarSyncPreview">Séance 1</div>
+      </div>
+    `,
+    `<button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+     <button class="btn btn-primary" onclick="saveCalendarSync()">Enregistrer la séance</button>`
+  );
+
+  const refreshPreview = () => {
+    const course = getCourse(document.getElementById("calendarSyncCourse")?.value) || getCourseAny(document.getElementById("calendarSyncCourse")?.value);
+    const sessionNumber = Number(document.getElementById("calendarSyncSession")?.value) || 1;
+    const preview = document.getElementById("calendarSyncPreview");
+    if (preview) {
+      preview.textContent = `Séance ${sessionNumber} - ${course ? course.title : "Formation"}`;
+    }
+  };
+
+  setTimeout(() => {
+    ["calendarSyncCourse", "calendarSyncSession"].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.addEventListener("input", refreshPreview);
+      if (el) el.addEventListener("change", refreshPreview);
+    });
+    refreshPreview();
+  }, 0);
+}
+
+function saveCalendarSync() {
+  if ((currentWorkspaceRole || getWorkspaceRole()) !== "admin") {
+    showToast("Seul l'admin peut enregistrer des séances dans le calendrier.", "danger");
+    return;
+  }
+
+  const courseId = document.getElementById("calendarSyncCourse")?.value;
+  const course = getCourse(courseId) || getCourseAny(courseId);
+  const sessionNumber = Number(document.getElementById("calendarSyncSession")?.value || 0);
+  const date = document.getElementById("calendarSyncDate")?.value;
+  const startTime = document.getElementById("calendarSyncStart")?.value;
+  const endTime = document.getElementById("calendarSyncEnd")?.value;
+
+  if (!course) {
+    showToast("Choisis d'abord une formation.", "info");
+    return;
+  }
+  if (!sessionNumber || sessionNumber < 1) {
+    showToast("Le numéro de séance doit être supérieur à 0.", "info");
+    return;
+  }
+  if (!date || !startTime || !endTime) {
+    showToast("Renseigne la date et les horaires de la séance.", "info");
+    return;
+  }
+
+  const startAt = new Date(`${date}T${startTime}:00`);
+  const endAt = new Date(`${date}T${endTime}:00`);
+  if (Number.isNaN(startAt.getTime()) || Number.isNaN(endAt.getTime()) || endAt <= startAt) {
+    showToast("L'heure de fin doit être après l'heure de début.", "danger");
+    return;
+  }
+
+  const eventTitle = `Séance ${sessionNumber} - ${course.title}`;
+  const existing = calendarEvents.find(event =>
+    event.courseId === course.id &&
+    Number(event.sessionNumber) === sessionNumber &&
+    event.date === date
+  );
+
+  const payload = {
+    id: existing?.id || makeCalendarEventId(),
+    courseId: course.id,
+    courseTitle: course.title,
+    trainerId: course.trainerId || null,
+    sessionNumber,
+    date,
+    startTime,
+    endTime,
+    startAt: startAt.toISOString(),
+    endAt: endAt.toISOString(),
+    title: eventTitle,
+    createdAt: existing?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    type: existing?.type || "zoom"
+  };
+
+  if (existing) {
+    Object.assign(existing, payload);
+  } else {
+    calendarEvents.unshift(payload);
+  }
+  syncTrainerSessionsFromCalendarEvents();
+
+  const selectedEvent = existing || calendarEvents[0];
+
+  (async () => {
+    try {
+      const saved = await saveCalendarEventToSupabase(selectedEvent, { existingId: existing?.id || null });
+      if (!saved) {
+        persistCalendarEvents();
+        syncTrainerSessionsFromCalendarEvents();
+        showToast("Supabase n'a pas pu être utilisé, la séance a été enregistrée localement en secours.", "info");
+      } else {
+        await loadCalendarEventsFromSupabase();
+        showToast("Séance enregistrée dans Supabase et visible dans le calendrier.", "success");
+      }
+    } catch (error) {
+      console.error("[Supabase] Erreur lors de l'enregistrement de la séance :", error);
+      persistCalendarEvents();
+      syncTrainerSessionsFromCalendarEvents();
+      showToast("Impossible d'enregistrer dans Supabase, la séance a été conservée en local.", "danger");
+    } finally {
+      closeModal();
+      renderWorkspacePage(currentWorkspaceRole || getWorkspaceRole(), currentWorkspaceView || "dashboard");
+    }
+  })();
 }
 
 function renderPlaceholderPage(viewName) {
@@ -4147,6 +4644,7 @@ function renderWorkspacePage(role = getWorkspaceRole(), viewName = "dashboard") 
     users: renderAdminUsers,
     roles: renderAdminRoles,
     catalog: renderAdminCatalog,
+    calendar: renderAdminCalendar,
     course_review: renderAdminCourseReview,
     requests: renderAdminRequests,
     enrollments: renderAdminEnrollments,
@@ -4215,7 +4713,7 @@ function showToast(message, type = "info") {
 
 async function navigate(viewName) {
   const role = currentWorkspaceRole || getWorkspaceRole();
-  const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
+  const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "calendar", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
   const trainerViews = ["dashboard", "myteaching", "courses", "calendar", "evaluations", "corrections", "remises", "participants", "tracking", "preview", "submissions", "studio", "import"];
   const participantViews = ["dashboard", "catalog", "courses", "modules", "resources", "quiz", "requests", "assignments", "calendar", "certificates"];
   
