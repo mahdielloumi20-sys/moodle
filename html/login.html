@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,9 +8,12 @@
   <meta name="description" content="Connexion à la plateforme IC Canada Academy LMS">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap"
+    rel="stylesheet">
   <link rel="stylesheet" href="../css/login.css">
 </head>
+
 <body>
   <a href="#loginForm" class="skip">Aller au formulaire de connexion</a>
 
@@ -70,14 +74,14 @@
 
           <div class="row">
             <label class="remember"><input type="checkbox" checked> Se souvenir de moi</label>
-            <a href="#" onclick="event.preventDefault(); showToast('La récupération du mot de passe sera bientôt disponible.', 'info');">Mot de passe oublié ?</a>
+            <a href="#" onclick="event.preventDefault(); triggerPasswordReset();">Mot de passe oublié ?</a>
           </div>
 
           <div class="login-actions-group">
             <button type="submit" class="btn btn-primary">Se connecter</button>
             <p class="signup-redirect">
-            Pas encore de compte ? <a href="inscription.html">S'inscrire gratuitement</a>
-          </p>
+              Pas encore de compte ? <a href="inscription.html">S'inscrire gratuitement</a>
+            </p>
           </div>
         </form>
       </div>
@@ -85,9 +89,33 @@
   </main>
 
   <div class="toast-container" id="toastContainer" aria-live="polite" aria-atomic="false"></div>
+  <!-- Popup de réinitialisation de mot de passe (Masquée par défaut) -->
+<div id="resetModal" class="modal-overlay" style="display: none;" aria-hidden="true">
+  <div class="modal-content login-form">
+    <h2>Nouveau mot de passe</h2>
+    <p class="sub">Sécurisez l'accès à votre espace personnel</p>
+    
+    <form id="resetPasswordForm" onsubmit="event.preventDefault(); handlePasswordUpdate();">
+      <label for="newPassword">Nouveau mot de passe</label>
+      <input type="password" id="newPassword" placeholder="••••••••••" required autocomplete="new-password">
+
+      <label for="confirmPassword">Confirmer le mot de passe</label>
+      <input type="password" id="confirmPassword" placeholder="••••••••••" required autocomplete="new-password">
+      
+      <span id="passwordError" class="password-error-msg" style="display: none;">Les mots de passe ne correspondent pas.</span>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" onclick="closeResetModal()">Annuler</button>
+        <button type="submit" class="btn btn-primary">Confirmer</button>
+      </div>
+    </form>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../js/env.js"></script>
   <script src="../js/supabase.js"></script>
   <script src="../js/auth-supabase.js"></script>
   <script src="../js/login.js"></script>
 </body>
+
 </html>

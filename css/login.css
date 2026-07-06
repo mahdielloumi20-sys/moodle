@@ -520,3 +520,72 @@ input {
     height: 42px;
   }
 }
+
+
+
+/* --- MODAL DESIGN SYSTEM --- */
+.modal-overlay {
+  background: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal-content {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+  width: 100%;
+  max-width: 460px;
+  animation: modalFadeIn 0.25s ease-out;
+}
+
+.modal-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover {
+  background: #e2e8f0;
+  transform: translateY(-2px);
+}
+
+.password-error-msg {
+  color: var(--red-600);
+  font-size: 12px;
+  font-weight: 600;
+  display: block;
+  margin-top: 8px;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Ajustement pour mobile */
+@media (max-width: 480px) {
+  .modal-actions {
+    grid-template-columns: 1fr;
+  }
+}
