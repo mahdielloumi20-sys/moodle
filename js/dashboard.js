@@ -2505,38 +2505,62 @@ function renderAdminEnrollments() {
 }
 
 function renderAdminGroups() {
-  // 🎯 FORCE LA PRIORITÉ SUR LES DONNÉES SUPABASE
   const currentGroups = window.groups || (typeof groups !== 'undefined' ? groups : []);
   const selectedGroup = currentGroups.length > 0 ? currentGroups[0] : null;
 
   return `
     <div class="breadcrumb"><span>Administration</span><span>Groupes & accès</span></div>
     
-    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
       <div>
         <h1 class="page-title">Groupes & accès</h1>
         <p class="page-subtitle">Gestion des cohortes et du verrouillage des modules.</p>
       </div>
-      <button onclick="openCreateGroupModal()" class="btn-primary" style="background: #a31526; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.2); transition: background 0.2s;">
-        + Nouveau groupe
+      <button onclick="openCreateGroupModal()" class="btn btn-primary" style="background: #a31526; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.15);">
+        ${typeof icon === 'function' ? icon("plus", 14) : ''} Nouveau groupe
       </button>
     </div>
     
     <div class="grid-main">
       <div class="table-wrap">
-        <table class="table">
-          <thead><tr><th>Groupe</th><th>Formation</th><th>Membres</th></tr></thead>
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th>Groupe</th>
+              <th>Formation</th>
+              <th>Membres</th>
+              <th style="text-align: right; padding-right: 16px;">Actions</th>
+            </tr>
+          </thead>
           <tbody>
             ${currentGroups.length > 0 ? currentGroups.map(group => {
-              const course = getCourse(group.courseId);
+              const course = typeof getCourse === 'function' ? getCourse(group.courseId) : null;
               return `
-                <tr>
-                  <td><strong>${escapeHTML(group.name)}</strong></td>
-                  <td>${course ? escapeHTML(course.title) : "-"}</td>
-                  <td>${group.members ? group.members.length : 0}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 16px 12px;"><strong>${escapeHTML(group.name)}</strong></td>
+                  <td style="padding: 16px 12px; color: #4b5563;">${course ? escapeHTML(course.title || course.name) : "-"}</td>
+                  <td style="padding: 16px 12px;"><span class="badge" style="background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-weight: 500; font-size: 13px;">${group.members ? group.members.length : 0} membres</span></td>
+                  
+                  <!-- 🎯 ACTIONS CORRIGÉES AVEC TES CLASSES ET ICÔNES NATIVES -->
+                  <td class="td-actions" style="padding: 16px 12px; text-align: right;">
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; white-space: nowrap;">
+                      
+                      <!-- Bouton Modifier : Calqué sur le bouton "Voir" de ton app -->
+                      <button class="btn btn-sm btn-secondary" onclick="window.openEditGroupModal('${group.id}')" style="font-family: inherit;">
+                        ${typeof icon === 'function' ? icon("edit", 13) : ''} Modifier
+                      </button>
+                      
+                      <!-- Bouton Supprimer : Version destructive élégante avec icône -->
+                      <button class="btn btn-sm" onclick="window.deleteGroup('${group.id}', '${escapeHTML(group.name)}')" 
+                        style="font-family: inherit; background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; cursor: pointer; transition: all 0.2s;">
+                        ${typeof icon === 'function' ? icon("trash", 13) : ''} Supprimer
+                      </button>
+                      
+                    </div>
+                  </td>
                 </tr>
               `;
-            }).join("") : '<tr><td colspan="3" style="text-align: center; color: #6b7280; padding: 20px;">Aucun groupe créé pour le moment. Cliquez sur "+ Nouveau groupe" pour commencer.</td></tr>'}
+            }).join("") : '<tr><td colspan="4" style="text-align: center; color: #6b7280; padding: 32px;">Aucun groupe créé pour le moment.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -2544,7 +2568,7 @@ function renderAdminGroups() {
       <div class="card">
         <h3 class="card-title">${icon("layers", 18)} Accès du groupe</h3>
         ${selectedGroup ? 
-          accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
+          (typeof accessRules !== 'undefined' ? accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
             <div class="activity-item">
               <span class="activity-dot"></span>
               <div class="activity-content">
@@ -2552,7 +2576,7 @@ function renderAdminGroups() {
                 <div class="activity-time">${rule.open ? "Ouvert" : "Verrouillé"}</div>
               </div>
             </div>
-          `).join("") 
+          `).join("") : '<p style="color: #6b7280; font-size: 14px;">Aucune règle configurée.</p>')
           : '<p style="color: #6b7280; font-size: 14px; margin: 0;">Aucun groupe sélectionné ou disponible.</p>'
         }
       </div>
@@ -2560,6 +2584,167 @@ function renderAdminGroups() {
   `;
 }
 
+window.openEditGroupModal = function(groupId) {
+  const currentGroups = window.groups || [];
+  const group = currentGroups.find(g => g.id === groupId);
+  if (!group) return;
+
+  // Récupération globale des formations et utilisateurs existants
+  const allCourses = window.courses || (typeof courses !== 'undefined' ? courses : []);
+  const allUsers = typeof users !== 'undefined' ? users : [];
+  
+  // On filtre pour n'avoir que les participants dans la liste des choix
+  const participants = allUsers.filter(u => u.role === 'participant');
+  
+  // Extraction des IDs des membres actuels pour pouvoir cocher les cases
+  const currentMemberIds = group.members ? group.members.map(m => m.user_id) : [];
+
+  const modalHtml = `
+    <div id="edit-group-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 99999;">
+      <div style="width: 100%; max-width: 460px; background: #ffffff; border-radius: 16px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #f1f5f9;">
+        <h3 style="margin: 0 0 4px 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Modifier le groupe</h3>
+        <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: #64748b;">Modifiez les détails de la cohorte et ajustez ses membres.</p>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Nom du groupe</label>
+          <input type="text" id="edit_group_name" value="${escapeHTML(group.name)}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Formation associée</label>
+          <select id="edit_group_course" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: white;">
+            <option value="">Aucune formation</option>
+            ${allCourses.map(c => `<option value="${c.id}" ${c.id === group.courseId ? 'selected' : ''}>${escapeHTML(c.title || c.name)}</option>`).join('')}
+          </select>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Membres du groupe</label>
+          <div style="max-height: 160px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: #f9fafb;">
+            ${participants.map(p => {
+              const isChecked = currentMemberIds.includes(p.id) ? 'checked' : '';
+              return `
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #475569; cursor: pointer;">
+                  <input type="checkbox" name="edit_group_members_checkboxes" value="${p.id}" ${isChecked}>
+                  ${escapeHTML(`${p.firstName || p.first_name || ''} ${p.lastName || p.last_name || ''}`.trim())}
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button class="btn btn-secondary" style="padding: 8px 16px; border-radius: 8px;" onclick="document.getElementById('edit-group-modal').remove()">Annuler</button>
+          <button id="btn-save-edit-group" class="btn btn-primary" style="padding: 8px 16px; border-radius: 8px; background: #a31526; border: none;" onclick="window.submitEditGroup('${groupId}')">Enregistrer les modifications</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+// 1. MISE À JOUR DU GROUPE
+window.submitEditGroup = async function(groupId) {
+  const nameInput = document.getElementById('edit_group_name');
+  const courseSelect = document.getElementById('edit_group_course');
+  const btn = document.getElementById('btn-save-edit-group');
+  
+  if (!nameInput || !courseSelect || !btn) return;
+  
+  const newName = nameInput.value.trim();
+  const newCourseId = courseSelect.value || null;
+  
+  if (!newName) {
+    alert("Le nom du groupe ne peut pas être vide.");
+    return;
+  }
+
+  // Collecte des cases cochées
+  const checkboxes = document.querySelectorAll('input[name="edit_group_members_checkboxes"]:checked');
+  const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+
+  btn.disabled = true;
+  btn.innerText = "Mise à jour en DB...";
+
+  try {
+    // A. Update des infos de base (Table groups)
+    const { error: groupError } = await window.supabaseInstance
+      .from('groups')
+      .update({ name: newName, course_id: newCourseId })
+      .eq('id', groupId);
+
+    if (groupError) throw groupError;
+
+    // B. Nettoyage complet des anciens membres de ce groupe
+    const { error: deleteError } = await window.supabaseInstance
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (deleteError) throw deleteError;
+
+    // C. Ré-insertion des nouveaux membres sélectionnés
+    if (selectedUserIds.length > 0) {
+      const payload = selectedUserIds.map(uid => ({
+        group_id: groupId,
+        user_id: uid
+      }));
+
+      const { error: insertError } = await window.supabaseInstance
+        .from('group_members')
+        .insert(payload);
+
+      if (insertError) throw insertError;
+    }
+
+    // Réussite ! Synchronisation des données locales et rafraîchis
+    if (typeof loadGroupsFromSupabase === 'function') await loadGroupsFromSupabase();
+    
+    if (typeof showToast === 'function') showToast('Groupe mis à jour avec succès !', 'success');
+    document.getElementById('edit-group-modal').remove();
+
+    if (typeof navigate === 'function') await navigate('groups');
+
+  } catch (err) {
+    console.error("❌ Erreur modification groupe :", err.message);
+    btn.disabled = false;
+    btn.innerText = "Enregistrer les modifications";
+    alert(`Erreur : ${err.message}`);
+  }
+};
+
+// 2. SUPPRESSION DU GROUPE
+window.deleteGroup = async function(groupId, groupName) {
+  const confirmation = confirm(`Voulez-vous vraiment supprimer définitivement le groupe "${groupName}" ?\nCette action retirera tous ses membres.`);
+  if (!confirmation) return;
+
+  try {
+    // A. Suppression des liaisons membres d'abord (intégrité relationnelle SQL)
+    const { error: membersDeleteError } = await window.supabaseInstance
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (membersDeleteError) throw membersDeleteError;
+
+    // B. Suppression de la ligne du groupe (Table groups)
+    const { error: groupDeleteError } = await window.supabaseInstance
+      .from('groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (groupDeleteError) throw groupDeleteError;
+
+    // C. Rafraîchissement complet
+    if (typeof loadGroupsFromSupabase === 'function') await loadGroupsFromSupabase();
+    if (typeof showToast === 'function') showToast('Groupe supprimé avec succès.', 'success');
+    
+    if (typeof navigate === 'function') await navigate('groups');
+
+  } catch (err) {
+    console.error("❌ Erreur suppression groupe :", err.message);
+    alert(`Impossible de supprimer le groupe : ${err.message}`);
+  }
+};
 async function loadGroupsFromSupabase() {
   try {
     const { data: dbGroups, error } = await window.supabaseInstance
@@ -3642,66 +3827,95 @@ async function handleTrainerImportFilesChange(event) {
 function openTrainerImportDetailsModal(fileList) {
   const htmlCount = fileList.filter(f => /\.html?$/i.test(f.name)).length;
   const pdfCount = fileList.filter(f => /\.pdf$/i.test(f.name)).length;
+
+  const modalBodyHtml = `
+    <div style="font-family: inherit; color: #1e293b; display: flex; flex-direction: column; gap: 16px; text-align: left;">
+      
+      <!-- 🌟 BANNIÈRE DE NOTIFICATION MODERNE -->
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 16px; border-radius: 10px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span><strong>${htmlCount}</strong> module(s) HTML et <strong>${pdfCount}</strong> ressource(s) PDF détecté(s) prête(s) à l'importation.</span>
+      </div>
+
+      <!-- CHAMP EN PLEINE LARGEUR : TITRE -->
+      <div class="form-group" style="margin: 0;">
+        <label for="imp_title" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Titre de la formation <span style="color: #ef4444;">*</span></label>
+        <input class="form-control" type="text" id="imp_title" placeholder="ex : Initiation au Marketing Digital" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 1 : CATÉGORIE & DURÉE -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_category" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Catégorie</label>
+          <input class="form-control" type="text" id="imp_category" placeholder="ex : Marketing" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_duration" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Durée</label>
+          <input class="form-control" type="text" id="imp_duration" placeholder="ex : 12h" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 2 : PRIX & NIVEAU -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_price" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Prix (€)</label>
+          <input class="form-control" type="number" id="imp_price" min="0" value="0" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_level" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Niveau</label>
+          <select class="form-control" id="imp_level" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: #fff; height: auto;">
+            <option value="Débutant">Débutant</option>
+            <option value="Intermédiaire">Intermédiaire</option>
+            <option value="Avancé">Avancé</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- CHAMP EN PLEINE LARGEUR : DESCRIPTION -->
+      <div class="form-group" style="margin: 0;">
+        <label for="imp_description" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Description</label>
+        <textarea class="form-control" id="imp_description" rows="2" placeholder="Présentation courte de la formation" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; resize: vertical; font-family: inherit;"></textarea>
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 3 : DATE DE COURS & IMPORT DE QUIZ -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_course_date" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Date du cours <span style="color: #ef4444;">*</span></label>
+          <input class="form-control" type="datetime-local" id="imp_course_date" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+          <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">Planification automatique sur l'agenda.</span>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_quiz_file" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Importer un quiz <span style="font-size: 11px; color: #94a3b8; font-weight: 400; text-transform: none;">(.json optionnel)</span></label>
+          <input type="file" id="imp_quiz_file" accept=".json" class="form-control" style="width: 100%; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem; height: auto;">
+          <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">Structure attendue : <code>[{"title":"...","questions":10}]</code></span>
+        </div>
+      </div>
+
+      <!-- 🔒 CASIER SÉCURISÉ : RÈGLES D'ACCÈS -->
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 4px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Sécurité des fichiers</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: #334155; font-weight: 400; cursor: pointer;">
+            <input type="radio" name="imp_access" value="view" checked style="margin-top: 3px;">
+            <span><strong>Visualisation uniquement</strong> — Lecture sécurisée en ligne, téléchargement local bloqué.</span>
+          </label>
+          <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: #334155; font-weight: 400; cursor: pointer;">
+            <input type="radio" name="imp_access" value="download" style="margin-top: 3px;">
+            <span><strong>Visualisation + Téléchargement</strong> — Autorise les élèves à télécharger les documents d'étude.</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  `;
+
   showModal(
     "Informations de la formation",
-    `
-    <p class="settings-note">${htmlCount} fichier(s) HTML détecté(s) comme modules, ${pdfCount} fichier(s) PDF détecté(s) comme ressources.</p>
-    <div class="form-group">
-      <label for="imp_title">Titre de la formation *</label>
-      <input class="form-control" type="text" id="imp_title" placeholder="ex : Initiation au Marketing Digital">
-    </div>
-    <div class="form-group">
-      <label for="imp_category">Catégorie</label>
-      <input class="form-control" type="text" id="imp_category" placeholder="ex : Marketing">
-    </div>
-    <div class="form-group">
-      <label for="imp_duration">Durée</label>
-      <input class="form-control" type="text" id="imp_duration" placeholder="ex : 12h">
-    </div>
-    <div class="form-group">
-      <label for="imp_price">Prix (€)</label>
-      <input class="form-control" type="number" id="imp_price" min="0" value="0">
-    </div>
-    <div class="form-group">
-      <label for="imp_level">Niveau</label>
-      <select class="form-control" id="imp_level">
-        <option value="Débutant">Débutant</option>
-        <option value="Intermédiaire">Intermédiaire</option>
-        <option value="Avancé">Avancé</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="imp_description">Description</label>
-      <textarea class="form-control" id="imp_description" rows="3" placeholder="Présentation courte de la formation"></textarea>
-    </div>
-    <div class="form-group">
-      <label for="imp_course_date">Date du cours <span style="color:var(--danger,#e53e3e);">*</span> <span style="font-size:12px;color:var(--text-muted);">(obligatoire — sera affiché dans le calendrier des apprenants)</span></label>
-      <input class="form-control" type="datetime-local" id="imp_course_date">
-    </div>
-    <div class="form-group">
-      <label for="imp_quiz_file">Importer un quiz <span style="font-size:12px;color:var(--text-muted);">(optionnel — fichier .json)</span></label>
-      <input type="file" id="imp_quiz_file" accept=".json" class="form-control" style="padding:6px;">
-      <div class="settings-note" style="margin-top:6px;">Format attendu : <code>[{"title":"Titre question","questions":10}, …]</code></div>
-    </div>
-    <div class="form-group">
-      <label>Accès au contenu pour les participants</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-          <input type="radio" name="imp_access" value="view" checked>
-          Visualisation uniquement (le participant consulte le contenu en ligne, sans pouvoir le télécharger)
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-          <input type="radio" name="imp_access" value="download">
-          Visualisation + téléchargement (le participant peut aussi télécharger les fichiers de la formation)
-        </label>
-      </div>
-    </div>
-    `,
+    modalBodyHtml,
     `<button class="btn btn-secondary" onclick="cancelTrainerImportFiles()">Annuler</button>
      <button class="btn btn-primary" onclick="confirmTrainerImportFromFiles()">${icon("check", 14)} Créer la formation</button>`
   );
 }
-
 function cancelTrainerImportFiles() {
   pendingImportFiles = null;
   closeModal();
