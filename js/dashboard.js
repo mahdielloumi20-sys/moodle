@@ -1723,8 +1723,10 @@ async function setupWorkspaceShell(requestedRole) {
         const isParticipant = activeRole === "participant";
         const hasPendingNotif = isParticipant && view === "requests" && typeof getUnseenNotifications === 'function' && getUnseenNotifications(uid2).length > 0;
         const badge = hasPendingNotif ? ` <span style="display:inline-block;min-width:18px;height:18px;border-radius:999px;background:#e53e3e;color:#fff;font-size:11px;font-weight:700;line-height:18px;text-align:center;margin-left:6px;">${getUnseenNotifications(uid2).length}</span>` : "";
-        
-        return `<a class="nav-item${index === 0 ? " active" : ""}" href="javascript:void(0)" data-view="${view}" onclick="navigate('${view}'); return false;" ${index === 0 ? 'aria-current="page"' : ""}>${label}${badge}</a>`;
+        // On détermine l'onglet actif à partir de la vue réellement affichée (et non plus du premier item par défaut),
+        // pour éviter que la sidebar ne se réinitialise sur "Tableau de bord" après le chargement async du rôle.
+        const isActive = view === (currentWorkspaceView || "dashboard");
+        return `<a class="nav-item${isActive ? " active" : ""}" href="javascript:void(0)" data-view="${view}" onclick="navigate('${view}'); return false;" ${isActive ? 'aria-current="page"' : ""}>${label}${badge}</a>`;
       }).join("")}
     </nav>
   `;
