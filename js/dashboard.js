@@ -1924,9 +1924,17 @@ function renderAdminUsers() {
             const lName = user.lastName || user.last_name || "";
             const email = user.email || "";
             
-            // Sécurité DB : Récupération des données du groupe (camelCase ou snake_case)
-            const groupName = user.groupName || user.group_name || "Aucun";
-            const groupId = user.groupId || user.group_id || "none";
+            // =========================================================
+            // 🎯 CORRECTION DYNAMIQUE : RECHERCHE DU GROUPE DANS WINDOW.GROUPS
+            // =========================================================
+            const dbGroups = window.groups || [];
+            const foundGroup = dbGroups.find(g => 
+              g.members && g.members.some(m => m.user_id === user.id)
+            );
+
+            // On extrait les valeurs dynamiques basées sur la base de données
+            const groupName = foundGroup ? foundGroup.name : "Aucun";
+            const groupId = foundGroup ? foundGroup.id : "none";
             
             const enrollCount = enrollments.filter(enrollment => 
               enrollment.userId === user.id || enrollment.user_id === user.id
@@ -1935,10 +1943,10 @@ function renderAdminUsers() {
             const roleClass = user.role === "admin" ? "badge badge--danger" : user.role === "trainer" ? "badge badge--info" : "badge badge--success";
             const roleLabel = user.role === "admin" ? "Admin" : user.role === "trainer" ? "Formateur" : "Participant";
             
-            // Étape 2b : Style premium pour le badge de groupe
-            const groupStyle = groupName === "Aucun" || groupName === "none"
-              ? "background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb;" // Style gris sobre si sans groupe
-              : "background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;"; // Style violet premium si rattaché à un groupe
+            // Style premium hérité de ton design
+            const groupStyle = groupName === "Aucun"
+              ? "background: #f3f4f6; color: #4b5563; border: 1px solid #e5e7eb;" 
+              : "background: #f5f3ff; color: #6d28d9; border: 1px solid #ddd6fe;"; 
             
             return `
               <tr>
@@ -1953,6 +1961,7 @@ function renderAdminUsers() {
                 </td>
                 <td><span class="${roleClass}">${roleLabel}</span></td>
                 
+                <!-- Rendu du badge de groupe ultra-résistant aux rafraîchissements -->
                 <td>
                   <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; ${groupStyle}">
                     ${escapeHTML(groupName)}
@@ -1964,7 +1973,7 @@ function renderAdminUsers() {
                   <button class="btn btn-sm btn-secondary" onclick="showToast('Prévisualisation du compte ${escapeHTML(fName)}', 'info')">
                     ${icon("eye", 13)} Voir
                   </button>
-                  <button class="btn btn-sm btn-primary" style="margin-left: 6px;" onclick="openEditRoleModal('${user.id}', '${user.role}', '${groupId}')">
+                  <button class="btn btn-sm btn-primary" style="margin-left: 6px;" onclick="window.openEditRoleModal('${user.id}', '${user.role}', '${groupId}')">
                     Modifier
                   </button>
                 </td>
@@ -1978,10 +1987,17 @@ function renderAdminUsers() {
 }
 
 window.openEditRoleModal = function(userId, currentRole, currentGroupId) {
+  // 🎯 On récupère les vrais groupes synchronisés depuis Supabase
+  const availableGroups = window.groups || [];
+
   // Génération dynamique des options de groupe
   const groupOptions = availableGroups.map(g => `
-    <option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${g.name}</option>
+    <option value="${g.id}" ${g.id === currentGroupId ? 'selected' : ''}>${escapeHTML(g.name)}</option>
   `).join('');
+
+  // Nettoyage de l'ancienne modale au cas où
+  const existingModal = document.getElementById('role-modal');
+  if (existingModal) existingModal.remove();
 
   const modalHtml = `
     <div id="role-modal" style="
@@ -2022,7 +2038,7 @@ window.openEditRoleModal = function(userId, currentRole, currentGroupId) {
         <div style="margin-bottom: 28px;">
           <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Groupe d'étude</label>
           <select id="popup_group_select" class="form-control" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
-            <option value="none" ${currentGroupId === 'none' ? 'selected' : ''}>Pas de groupe</option>
+            <option value="none" ${!currentGroupId || currentGroupId === 'none' ? 'selected' : ''}>Pas de groupe</option>
             ${groupOptions}
           </select>
         </div>
@@ -2064,7 +2080,6 @@ window.saveUserRoleAndGroup = async function(userId) {
       .update({ role: newRole })
       .eq('id', userId);
 
-    // Si Supabase renvoie une erreur, on stope DIRECTEMENT ici
     if (roleError) throw new Error(`Erreur Table Profiles: ${roleError.message}`);
 
     // 2. NETTOYAGE DU GROUPE PRÉCÉDENT (Table group_members)
@@ -2088,7 +2103,15 @@ window.saveUserRoleAndGroup = async function(userId) {
     }
 
     // ==========================================
-    // LE FRONT NE SE MET À JOUR QU'ICI (SUCCÈS DB GARANTI)
+    // 🔄 RECHARGEMENT DES COMPTEURS DE GROUPES
+    // ==========================================
+    // On force la mise à jour globale pour que l'onglet "Groupes" soit au courant du changement
+    if (typeof loadGroupsFromSupabase === 'function') {
+      await loadGroupsFromSupabase();
+    }
+
+    // ==========================================
+    // LE FRONT SE MET À JOUR (SUCCÈS DB GARANTI)
     // ==========================================
     const userIndex = users.findIndex(u => u.id === userId);
     if (userIndex !== -1) {
@@ -2104,8 +2127,10 @@ window.saveUserRoleAndGroup = async function(userId) {
       showToast('Données synchronisées avec la base de données !', 'success');
     }
 
-    // Rafraîchissement du tableau HTML
-    if (typeof renderAdminPage === 'function') {
+    // Rafraîchissement du tableau HTML avec support de ton routeur
+    if (typeof navigate === 'function') {
+      navigate('users'); // Utilise ton routeur central si disponible
+    } else if (typeof renderAdminPage === 'function') {
       renderAdminPage('users');
     }
 
@@ -2115,11 +2140,9 @@ window.saveUserRoleAndGroup = async function(userId) {
     // ==========================================
     console.error("❌ ÉCHEC SYNCHRONISATION DATABASE :", err.message);
     
-    // On débloque le bouton pour te laisser corriger ou réessayer
     btn.disabled = false;
     btn.innerText = "Enregistrer";
     
-    // On affiche l'erreur réelle dans l'interface pour savoir ce qui bloque
     if (typeof showToast === 'function') {
       showToast(err.message, 'danger');
     } else {
@@ -2127,6 +2150,234 @@ window.saveUserRoleAndGroup = async function(userId) {
     }
   }
 };
+
+// logique dajout d'utilisateur 
+window.openCreateUser = function() {
+  const availableGroups = window.groups || [];
+
+  // Génération des options pour le sélecteur de groupe
+  const groupOptions = availableGroups.map(g => `
+    <option value="${g.id}">${escapeHTML(g.name)}</option>
+  `).join('');
+
+  // Nettoyage d'une ancienne modale si elle existe
+  const existingModal = document.getElementById('create-user-modal');
+  if (existingModal) existingModal.remove();
+
+  const modalHtml = `
+    <div id="create-user-modal" style="
+      position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; z-index: 99999;
+    ">
+      <div style="
+        width: 100%; max-width: 520px; background: #ffffff; border-radius: 16px;
+        padding: 28px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+        border: 1px solid #f1f5f9; animation: modalPopIn 0.2s ease-out;
+      ">
+        <h3 style="margin: 0 0 4px 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Créer un nouvel utilisateur</h3>
+        <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: #64748b;">Remplissez les informations pour inscrire et affecter le nouvel apprenant.</p>
+        
+        <!-- Zone d'affichage des erreurs/succès (Inspiré de inscription.js) -->
+        <div id="create-user-error" style="
+          display: none; padding: 10px; border-radius: 8px; font-size: 0.85rem; 
+          margin-bottom: 16px; border: 1px solid transparent; text-align: center;
+        "></div>
+
+        <form id="adminCreateUserForm" onsubmit="window.submitCreateUser(event)" style="display: flex; flex-direction: column; gap: 14px;">
+          
+          <!-- Ligne 1 : Prénom & Nom -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Prénom</label>
+              <input type="text" id="create_firstName" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Nom</label>
+              <input type="text" id="create_lastName" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            </div>
+          </div>
+
+          <!-- Ligne 2 : Email & Téléphone -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Email</label>
+              <input type="email" id="create_email" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Téléphone</label>
+              <input type="tel" id="create_phone" required style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            </div>
+          </div>
+
+          <!-- Ligne 3 : Mot de passe & Rôle -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Mot de passe</label>
+              <input type="password" id="create_password" required placeholder="Min. 6 caractères" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+            </div>
+            <div>
+              <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Rôle plateforme</label>
+              <select id="create_role_select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: #fff;">
+                <option value="participant" selected>Participant</option>
+                <option value="trainer">Formateur</option>
+                <option value="admin">Admin</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Ligne 4 : Groupe d'étude -->
+          <div>
+            <label style="display: block; margin-bottom: 4px; font-weight: 500; font-size: 0.8rem; color: #334155;">Groupe d'étude</label>
+            <select id="create_group_select" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: #fff;">
+              <option value="none" selected>Pas de groupe (Aucun)</option>
+              ${groupOptions}
+            </select>
+          </div>
+
+          <!-- Actions boutons -->
+          <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 10px;">
+            <button type="button" class="btn btn-secondary" style="padding: 10px 18px; border-radius: 8px;" onclick="document.getElementById('create-user-modal').remove()">Annuler</button>
+            <button type="submit" id="btn-submit-create-user" class="btn btn-primary" style="padding: 10px 18px; border-radius: 8px; background: #991b1b; border: none;">Créer le compte</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+
+window.submitCreateUser = async function(event) {
+  event.preventDefault();
+
+  const btn = document.getElementById('btn-submit-create-user');
+  const errorBox = document.getElementById('create-user-error');
+
+  // Récupération de tous les champs
+  const email = document.getElementById('create_email').value.trim();
+  const password = document.getElementById('create_password').value;
+  const firstName = document.getElementById('create_firstName').value.trim();
+  const lastName = document.getElementById('create_lastName').value.trim();
+  const phone = document.getElementById('create_phone').value.trim();
+  const selectedRole = document.getElementById('create_role_select').value;
+  const selectedGroupId = document.getElementById('create_group_select').value;
+
+  // Helper local de traduction d'erreur hérité de ton inscription.js
+  const localTranslateError = (msg) => {
+    if (msg.includes("User already registered")) return "Cet email est déjà utilisé.";
+    if (msg.includes("Password should be at least")) return "Mot de passe trop court (min 6 caractères).";
+    return "Une erreur est survenue lors de l'authentification.";
+  };
+
+  // Verrouillage visuel
+  btn.disabled = true;
+  btn.innerText = "Création du compte...";
+  if (errorBox) errorBox.style.display = "none";
+
+  try {
+    // 🚀 ÉTAPE 1 : Création des identifiants (Auth Supabase)
+    const { data: authData, error: authError } = await window.supabaseInstance.auth.signUp({
+      email: email.toLowerCase(),
+      password: password,
+      options: {
+        data: { 
+          first_name: firstName,
+          last_name: lastName,
+          phone: phone
+        }
+      }
+    });
+
+    if (authError) throw new Error(localTranslateError(authError.message));
+    if (!authData.user) throw new Error("Une erreur inconnue a empêché la création du compte.");
+
+    const newUserId = authData.user.id;
+    console.log("✅ Authentification créée avec succès ! ID =", newUserId);
+
+    // 🚀 ÉTAPE 2 : Forcer la mise à jour du rôle ciblé (Table profiles)
+    // Note : On utilise un petit délai ou un upsert au cas où le déclencheur Postgres prendrait du temps
+    const { error: profileError } = await window.supabaseInstance
+      .from('profiles')
+      .update({ role: selectedRole })
+      .eq('id', newUserId);
+
+    if (profileError) throw new Error(`Profil créé mais erreur de rôle : ${profileError.message}`);
+
+    // 🚀 ÉTAPE 3 : Liaison de groupe (Table group_members)
+    if (selectedGroupId !== "none") {
+      const { error: groupError } = await window.supabaseInstance
+        .from('group_members')
+        .insert({
+          user_id: newUserId,
+          group_id: selectedGroupId
+        });
+
+      if (groupError) throw new Error(`Profil et rôle configurés, mais erreur d'attribution au groupe : ${groupError.message}`);
+    }
+
+    // 🚀 ÉTAPE 4 : Mise à jour de la mémoire locale (Front local)
+    // Si ton script utilise une fonction pour recharger la liste des utilisateurs depuis Supabase :
+    if (typeof loadUsersFromSupabase === 'function') {
+      await loadUsersFromSupabase();
+    } else if (typeof users !== 'undefined') {
+      // Injection de secours directe dans ton tableau local de données
+      users.push({
+        id: newUserId,
+        email: email.toLowerCase(),
+        firstName: firstName,
+        lastName: lastName,
+        role: selectedRole
+      });
+    }
+
+    // Forcer le rechargement global pour rafraîchir les compteurs de groupes
+    if (typeof loadGroupsFromSupabase === 'function') {
+      await loadGroupsFromSupabase();
+    }
+
+    // Affichage du succès dans la modale avant fermeture
+    if (errorBox) {
+      errorBox.textContent = "Compte admin synchronisé avec succès !";
+      errorBox.style.display = "block";
+      errorBox.style.backgroundColor = "#d4edda";
+      errorBox.style.color = "#155724";
+      errorBox.style.borderColor = "#c3e6cb";
+    }
+
+    if (typeof showToast === 'function') {
+      showToast('Nouvel utilisateur enregistré et affecté avec succès !', 'success');
+    }
+
+    // Fermer après un court instant
+    setTimeout(() => {
+      document.getElementById('create-user-modal').remove();
+      
+      // Rafraîchir l'interface graphique
+      if (typeof navigate === 'function') {
+        navigate('users');
+      } else if (typeof renderAdminPage === 'function') {
+        renderAdminPage('users');
+      }
+    }, 1200);
+
+  } catch (err) {
+    console.error("❌ ÉCHEC CRÉATION COMPTE ADMIN :", err.message);
+    btn.disabled = false;
+    btn.innerText = "Créer le compte";
+
+    // Affichage de l'erreur dans la boîte de dialogue de la modale
+    if (errorBox) {
+      errorBox.textContent = err.message;
+      errorBox.style.display = "block";
+      errorBox.style.backgroundColor = "#fde8e8";
+      errorBox.style.color = "#9b1c1c";
+      errorBox.style.borderColor = "#f8b4b4";
+    }
+  }
+};
+
+
+
 function renderAdminRoles() {
   const permissions = [
     ["Créer un cours", true, true, false],
@@ -2256,38 +2507,62 @@ function renderAdminEnrollments() {
 }
 
 function renderAdminGroups() {
-  // 🎯 FORCE LA PRIORITÉ SUR LES DONNÉES SUPABASE
   const currentGroups = window.groups || (typeof groups !== 'undefined' ? groups : []);
   const selectedGroup = currentGroups.length > 0 ? currentGroups[0] : null;
 
   return `
     <div class="breadcrumb"><span>Administration</span><span>Groupes & accès</span></div>
     
-    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
       <div>
         <h1 class="page-title">Groupes & accès</h1>
         <p class="page-subtitle">Gestion des cohortes et du verrouillage des modules.</p>
       </div>
-      <button onclick="openCreateGroupModal()" class="btn-primary" style="background: #a31526; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.2); transition: background 0.2s;">
-        + Nouveau groupe
+      <button onclick="openCreateGroupModal()" class="btn btn-primary" style="background: #a31526; color: white; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(163, 21, 38, 0.15);">
+        ${typeof icon === 'function' ? icon("plus", 14) : ''} Nouveau groupe
       </button>
     </div>
     
     <div class="grid-main">
       <div class="table-wrap">
-        <table class="table">
-          <thead><tr><th>Groupe</th><th>Formation</th><th>Membres</th></tr></thead>
+        <table class="table" style="width: 100%; border-collapse: collapse;">
+          <thead>
+            <tr>
+              <th>Groupe</th>
+              <th>Formation</th>
+              <th>Membres</th>
+              <th style="text-align: right; padding-right: 16px;">Actions</th>
+            </tr>
+          </thead>
           <tbody>
             ${currentGroups.length > 0 ? currentGroups.map(group => {
-              const course = getCourse(group.courseId);
+              const course = typeof getCourse === 'function' ? getCourse(group.courseId) : null;
               return `
-                <tr>
-                  <td><strong>${escapeHTML(group.name)}</strong></td>
-                  <td>${course ? escapeHTML(course.title) : "-"}</td>
-                  <td>${group.members ? group.members.length : 0}</td>
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 16px 12px;"><strong>${escapeHTML(group.name)}</strong></td>
+                  <td style="padding: 16px 12px; color: #4b5563;">${course ? escapeHTML(course.title || course.name) : "-"}</td>
+                  <td style="padding: 16px 12px;"><span class="badge" style="background: #eff6ff; color: #1e40af; padding: 4px 10px; border-radius: 6px; font-weight: 500; font-size: 13px;">${group.members ? group.members.length : 0} membres</span></td>
+                  
+                  <!-- 🎯 ACTIONS CORRIGÉES AVEC TES CLASSES ET ICÔNES NATIVES -->
+                  <td class="td-actions" style="padding: 16px 12px; text-align: right;">
+                    <div style="display: flex; gap: 8px; justify-content: flex-end; align-items: center; white-space: nowrap;">
+                      
+                      <!-- Bouton Modifier : Calqué sur le bouton "Voir" de ton app -->
+                      <button class="btn btn-sm btn-secondary" onclick="window.openEditGroupModal('${group.id}')" style="font-family: inherit;">
+                        ${typeof icon === 'function' ? icon("edit", 13) : ''} Modifier
+                      </button>
+                      
+                      <!-- Bouton Supprimer : Version destructive élégante avec icône -->
+                      <button class="btn btn-sm" onclick="window.deleteGroup('${group.id}', '${escapeHTML(group.name)}')" 
+                        style="font-family: inherit; background: #fef2f2; color: #991b1b; border: 1px solid #fee2e2; display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; cursor: pointer; transition: all 0.2s;">
+                        ${typeof icon === 'function' ? icon("trash", 13) : ''} Supprimer
+                      </button>
+                      
+                    </div>
+                  </td>
                 </tr>
               `;
-            }).join("") : '<tr><td colspan="3" style="text-align: center; color: #6b7280; padding: 20px;">Aucun groupe créé pour le moment. Cliquez sur "+ Nouveau groupe" pour commencer.</td></tr>'}
+            }).join("") : '<tr><td colspan="4" style="text-align: center; color: #6b7280; padding: 32px;">Aucun groupe créé pour le moment.</td></tr>'}
           </tbody>
         </table>
       </div>
@@ -2295,7 +2570,7 @@ function renderAdminGroups() {
       <div class="card">
         <h3 class="card-title">${icon("layers", 18)} Accès du groupe</h3>
         ${selectedGroup ? 
-          accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
+          (typeof accessRules !== 'undefined' ? accessRules.filter(rule => rule.groupId === selectedGroup.id).map(rule => `
             <div class="activity-item">
               <span class="activity-dot"></span>
               <div class="activity-content">
@@ -2303,7 +2578,7 @@ function renderAdminGroups() {
                 <div class="activity-time">${rule.open ? "Ouvert" : "Verrouillé"}</div>
               </div>
             </div>
-          `).join("") 
+          `).join("") : '<p style="color: #6b7280; font-size: 14px;">Aucune règle configurée.</p>')
           : '<p style="color: #6b7280; font-size: 14px; margin: 0;">Aucun groupe sélectionné ou disponible.</p>'
         }
       </div>
@@ -2311,6 +2586,167 @@ function renderAdminGroups() {
   `;
 }
 
+window.openEditGroupModal = function(groupId) {
+  const currentGroups = window.groups || [];
+  const group = currentGroups.find(g => g.id === groupId);
+  if (!group) return;
+
+  // Récupération globale des formations et utilisateurs existants
+  const allCourses = window.courses || (typeof courses !== 'undefined' ? courses : []);
+  const allUsers = typeof users !== 'undefined' ? users : [];
+  
+  // On filtre pour n'avoir que les participants dans la liste des choix
+  const participants = allUsers.filter(u => u.role === 'participant');
+  
+  // Extraction des IDs des membres actuels pour pouvoir cocher les cases
+  const currentMemberIds = group.members ? group.members.map(m => m.user_id) : [];
+
+  const modalHtml = `
+    <div id="edit-group-modal" style="position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.3); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 99999;">
+      <div style="width: 100%; max-width: 460px; background: #ffffff; border-radius: 16px; padding: 28px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); border: 1px solid #f1f5f9;">
+        <h3 style="margin: 0 0 4px 0; font-size: 1.25rem; font-weight: 600; color: #1e293b;">Modifier le groupe</h3>
+        <p style="margin: 0 0 20px 0; font-size: 0.85rem; color: #64748b;">Modifiez les détails de la cohorte et ajustez ses membres.</p>
+        
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Nom du groupe</label>
+          <input type="text" id="edit_group_name" value="${escapeHTML(group.name)}" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+
+        <div style="margin-bottom: 16px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Formation associée</label>
+          <select id="edit_group_course" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: white;">
+            <option value="">Aucune formation</option>
+            ${allCourses.map(c => `<option value="${c.id}" ${c.id === group.courseId ? 'selected' : ''}>${escapeHTML(c.title || c.name)}</option>`).join('')}
+          </select>
+        </div>
+
+        <div style="margin-bottom: 24px;">
+          <label style="display: block; margin-bottom: 6px; font-weight: 500; font-size: 0.85rem; color: #334155;">Membres du groupe</label>
+          <div style="max-height: 160px; overflow-y: auto; border: 1px solid #cbd5e1; border-radius: 8px; padding: 10px; background: #f9fafb;">
+            ${participants.map(p => {
+              const isChecked = currentMemberIds.includes(p.id) ? 'checked' : '';
+              return `
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 0.85rem; color: #475569; cursor: pointer;">
+                  <input type="checkbox" name="edit_group_members_checkboxes" value="${p.id}" ${isChecked}>
+                  ${escapeHTML(`${p.firstName || p.first_name || ''} ${p.lastName || p.last_name || ''}`.trim())}
+                </label>
+              `;
+            }).join('')}
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; gap: 12px;">
+          <button class="btn btn-secondary" style="padding: 8px 16px; border-radius: 8px;" onclick="document.getElementById('edit-group-modal').remove()">Annuler</button>
+          <button id="btn-save-edit-group" class="btn btn-primary" style="padding: 8px 16px; border-radius: 8px; background: #a31526; border: none;" onclick="window.submitEditGroup('${groupId}')">Enregistrer les modifications</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+};
+// 1. MISE À JOUR DU GROUPE
+window.submitEditGroup = async function(groupId) {
+  const nameInput = document.getElementById('edit_group_name');
+  const courseSelect = document.getElementById('edit_group_course');
+  const btn = document.getElementById('btn-save-edit-group');
+  
+  if (!nameInput || !courseSelect || !btn) return;
+  
+  const newName = nameInput.value.trim();
+  const newCourseId = courseSelect.value || null;
+  
+  if (!newName) {
+    alert("Le nom du groupe ne peut pas être vide.");
+    return;
+  }
+
+  // Collecte des cases cochées
+  const checkboxes = document.querySelectorAll('input[name="edit_group_members_checkboxes"]:checked');
+  const selectedUserIds = Array.from(checkboxes).map(cb => cb.value);
+
+  btn.disabled = true;
+  btn.innerText = "Mise à jour en DB...";
+
+  try {
+    // A. Update des infos de base (Table groups)
+    const { error: groupError } = await window.supabaseInstance
+      .from('groups')
+      .update({ name: newName, course_id: newCourseId })
+      .eq('id', groupId);
+
+    if (groupError) throw groupError;
+
+    // B. Nettoyage complet des anciens membres de ce groupe
+    const { error: deleteError } = await window.supabaseInstance
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (deleteError) throw deleteError;
+
+    // C. Ré-insertion des nouveaux membres sélectionnés
+    if (selectedUserIds.length > 0) {
+      const payload = selectedUserIds.map(uid => ({
+        group_id: groupId,
+        user_id: uid
+      }));
+
+      const { error: insertError } = await window.supabaseInstance
+        .from('group_members')
+        .insert(payload);
+
+      if (insertError) throw insertError;
+    }
+
+    // Réussite ! Synchronisation des données locales et rafraîchis
+    if (typeof loadGroupsFromSupabase === 'function') await loadGroupsFromSupabase();
+    
+    if (typeof showToast === 'function') showToast('Groupe mis à jour avec succès !', 'success');
+    document.getElementById('edit-group-modal').remove();
+
+    if (typeof navigate === 'function') await navigate('groups');
+
+  } catch (err) {
+    console.error("❌ Erreur modification groupe :", err.message);
+    btn.disabled = false;
+    btn.innerText = "Enregistrer les modifications";
+    alert(`Erreur : ${err.message}`);
+  }
+};
+
+// 2. SUPPRESSION DU GROUPE
+window.deleteGroup = async function(groupId, groupName) {
+  const confirmation = confirm(`Voulez-vous vraiment supprimer définitivement le groupe "${groupName}" ?\nCette action retirera tous ses membres.`);
+  if (!confirmation) return;
+
+  try {
+    // A. Suppression des liaisons membres d'abord (intégrité relationnelle SQL)
+    const { error: membersDeleteError } = await window.supabaseInstance
+      .from('group_members')
+      .delete()
+      .eq('group_id', groupId);
+
+    if (membersDeleteError) throw membersDeleteError;
+
+    // B. Suppression de la ligne du groupe (Table groups)
+    const { error: groupDeleteError } = await window.supabaseInstance
+      .from('groups')
+      .delete()
+      .eq('id', groupId);
+
+    if (groupDeleteError) throw groupDeleteError;
+
+    // C. Rafraîchissement complet
+    if (typeof loadGroupsFromSupabase === 'function') await loadGroupsFromSupabase();
+    if (typeof showToast === 'function') showToast('Groupe supprimé avec succès.', 'success');
+    
+    if (typeof navigate === 'function') await navigate('groups');
+
+  } catch (err) {
+    console.error("❌ Erreur suppression groupe :", err.message);
+    alert(`Impossible de supprimer le groupe : ${err.message}`);
+  }
+};
 async function loadGroupsFromSupabase() {
   try {
     const { data: dbGroups, error } = await window.supabaseInstance
@@ -3393,66 +3829,95 @@ async function handleTrainerImportFilesChange(event) {
 function openTrainerImportDetailsModal(fileList) {
   const htmlCount = fileList.filter(f => /\.html?$/i.test(f.name)).length;
   const pdfCount = fileList.filter(f => /\.pdf$/i.test(f.name)).length;
+
+  const modalBodyHtml = `
+    <div style="font-family: inherit; color: #1e293b; display: flex; flex-direction: column; gap: 16px; text-align: left;">
+      
+      <!-- 🌟 BANNIÈRE DE NOTIFICATION MODERNE -->
+      <div style="background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af; padding: 12px 16px; border-radius: 10px; font-size: 0.85rem; display: flex; align-items: center; gap: 10px; font-weight: 500;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink: 0;"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span><strong>${htmlCount}</strong> module(s) HTML et <strong>${pdfCount}</strong> ressource(s) PDF détecté(s) prête(s) à l'importation.</span>
+      </div>
+
+      <!-- CHAMP EN PLEINE LARGEUR : TITRE -->
+      <div class="form-group" style="margin: 0;">
+        <label for="imp_title" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Titre de la formation <span style="color: #ef4444;">*</span></label>
+        <input class="form-control" type="text" id="imp_title" placeholder="ex : Initiation au Marketing Digital" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 1 : CATÉGORIE & DURÉE -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_category" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Catégorie</label>
+          <input class="form-control" type="text" id="imp_category" placeholder="ex : Marketing" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_duration" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Durée</label>
+          <input class="form-control" type="text" id="imp_duration" placeholder="ex : 12h" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 2 : PRIX & NIVEAU -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_price" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Prix (€)</label>
+          <input class="form-control" type="number" id="imp_price" min="0" value="0" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_level" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Niveau</label>
+          <select class="form-control" id="imp_level" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; background: #fff; height: auto;">
+            <option value="Débutant">Débutant</option>
+            <option value="Intermédiaire">Intermédiaire</option>
+            <option value="Avancé">Avancé</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- CHAMP EN PLEINE LARGEUR : DESCRIPTION -->
+      <div class="form-group" style="margin: 0;">
+        <label for="imp_description" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Description</label>
+        <textarea class="form-control" id="imp_description" rows="2" placeholder="Présentation courte de la formation" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem; resize: vertical; font-family: inherit;"></textarea>
+      </div>
+
+      <!-- ⚡ GRILLE LIGNE 3 : DATE DE COURS & IMPORT DE QUIZ -->
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_course_date" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Date du cours <span style="color: #ef4444;">*</span></label>
+          <input class="form-control" type="datetime-local" id="imp_course_date" style="width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.9rem;">
+          <span style="font-size: 11px; color: #64748b; margin-top: 4px; display: block;">Planification automatique sur l'agenda.</span>
+        </div>
+        <div class="form-group" style="margin: 0;">
+          <label for="imp_quiz_file" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Importer un quiz <span style="font-size: 11px; color: #94a3b8; font-weight: 400; text-transform: none;">(.json optionnel)</span></label>
+          <input type="file" id="imp_quiz_file" accept=".json" class="form-control" style="width: 100%; padding: 6px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-size: 0.85rem; height: auto;">
+          <span style="font-size: 11px; color: #94a3b8; margin-top: 4px; display: block;">Structure attendue : <code>[{"title":"...","questions":10}]</code></span>
+        </div>
+      </div>
+
+      <!-- 🔒 CASIER SÉCURISÉ : RÈGLES D'ACCÈS -->
+      <div style="background: #f8fafc; padding: 14px; border-radius: 10px; border: 1px solid #e2e8f0; margin-top: 4px;">
+        <label style="display: block; margin-bottom: 8px; font-weight: 600; font-size: 0.78rem; color: #475569; text-transform: uppercase; letter-spacing: 0.05em;">Sécurité des fichiers</label>
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: #334155; font-weight: 400; cursor: pointer;">
+            <input type="radio" name="imp_access" value="view" checked style="margin-top: 3px;">
+            <span><strong>Visualisation uniquement</strong> — Lecture sécurisée en ligne, téléchargement local bloqué.</span>
+          </label>
+          <label style="display: flex; align-items: flex-start; gap: 10px; font-size: 0.85rem; color: #334155; font-weight: 400; cursor: pointer;">
+            <input type="radio" name="imp_access" value="download" style="margin-top: 3px;">
+            <span><strong>Visualisation + Téléchargement</strong> — Autorise les élèves à télécharger les documents d'étude.</span>
+          </label>
+        </div>
+      </div>
+
+    </div>
+  `;
+
   showModal(
     "Informations de la formation",
-    `
-    <p class="settings-note">${htmlCount} fichier(s) HTML détecté(s) comme modules, ${pdfCount} fichier(s) PDF détecté(s) comme ressources.</p>
-    <div class="form-group">
-      <label for="imp_title">Titre de la formation *</label>
-      <input class="form-control" type="text" id="imp_title" placeholder="ex : Initiation au Marketing Digital">
-    </div>
-    <div class="form-group">
-      <label for="imp_category">Catégorie</label>
-      <input class="form-control" type="text" id="imp_category" placeholder="ex : Marketing">
-    </div>
-    <div class="form-group">
-      <label for="imp_duration">Durée</label>
-      <input class="form-control" type="text" id="imp_duration" placeholder="ex : 12h">
-    </div>
-    <div class="form-group">
-      <label for="imp_price">Prix (€)</label>
-      <input class="form-control" type="number" id="imp_price" min="0" value="0">
-    </div>
-    <div class="form-group">
-      <label for="imp_level">Niveau</label>
-      <select class="form-control" id="imp_level">
-        <option value="Débutant">Débutant</option>
-        <option value="Intermédiaire">Intermédiaire</option>
-        <option value="Avancé">Avancé</option>
-      </select>
-    </div>
-    <div class="form-group">
-      <label for="imp_description">Description</label>
-      <textarea class="form-control" id="imp_description" rows="3" placeholder="Présentation courte de la formation"></textarea>
-    </div>
-    <div class="form-group">
-      <label for="imp_course_date">Date du cours <span style="color:var(--danger,#e53e3e);">*</span> <span style="font-size:12px;color:var(--text-muted);">(obligatoire — sera affiché dans le calendrier des apprenants)</span></label>
-      <input class="form-control" type="datetime-local" id="imp_course_date">
-    </div>
-    <div class="form-group">
-      <label for="imp_quiz_file">Importer un quiz <span style="font-size:12px;color:var(--text-muted);">(optionnel — fichier .json)</span></label>
-      <input type="file" id="imp_quiz_file" accept=".json" class="form-control" style="padding:6px;">
-      <div class="settings-note" style="margin-top:6px;">Format attendu : <code>[{"title":"Titre question","questions":10}, …]</code></div>
-    </div>
-    <div class="form-group">
-      <label>Accès au contenu pour les participants</label>
-      <div style="display:flex;flex-direction:column;gap:8px;margin-top:4px;">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-          <input type="radio" name="imp_access" value="view" checked>
-          Visualisation uniquement (le participant consulte le contenu en ligne, sans pouvoir le télécharger)
-        </label>
-        <label style="display:flex;align-items:center;gap:8px;font-weight:400;cursor:pointer;">
-          <input type="radio" name="imp_access" value="download">
-          Visualisation + téléchargement (le participant peut aussi télécharger les fichiers de la formation)
-        </label>
-      </div>
-    </div>
-    `,
+    modalBodyHtml,
     `<button class="btn btn-secondary" onclick="cancelTrainerImportFiles()">Annuler</button>
      <button class="btn btn-primary" onclick="confirmTrainerImportFromFiles()">${icon("check", 14)} Créer la formation</button>`
   );
 }
-
 function cancelTrainerImportFiles() {
   pendingImportFiles = null;
   closeModal();
@@ -4715,7 +5180,7 @@ function showToast(message, type = "info") {
 
 async function navigate(viewName) {
   const role = currentWorkspaceRole || getWorkspaceRole();
-  const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "calendar", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
+  const adminViews = ["dashboard", "tracking", "users", "roles", "catalog", "course_review", "requests", "enrollments", "groups", "payments", "certificates", "import_export", "activity", "settings"];
   const trainerViews = ["dashboard", "myteaching", "courses", "calendar", "evaluations", "corrections", "remises", "participants", "tracking", "preview", "submissions", "studio", "import"];
   const participantViews = ["dashboard", "catalog", "courses", "modules", "resources", "quiz", "requests", "assignments", "calendar", "certificates"];
   
@@ -4727,18 +5192,14 @@ async function navigate(viewName) {
   }
 
   // =========================================================
-  // 🔄 INTERCEPTION ET CHARGEMENT DYNAMIQUE DEPUIS SUPABASE
+  // 🎯 CORRECTION 1 : CHARGEMENT POUR LES GROUPES ET LES UTILISATEURS
   // =========================================================
-  if (viewName === "groups") {
-    // Si la fonction de chargement existe, on attend qu'elle finisse de remplir window.groups
+  if (viewName === "groups" || viewName === "users") {
     if (typeof loadGroupsFromSupabase === 'function') {
-      // Optionnel : Tu peux injecter un mini spinner temporaire dans ton conteneur principal 
-      // pendant la milliseconde de chargement pour un effet ultra fluide (ex: Shimmer effect)
-      await loadGroupsFromSupabase();
+      await loadGroupsFromSupabase(); // Charge les données avant d'afficher la page
     }
   }
 
-  // Le rendu se déclenche uniquement quand les données de la DB sont prêtes !
   renderWorkspacePage(role, viewName);
 }
 function switchWorkspaceRole(role) {
